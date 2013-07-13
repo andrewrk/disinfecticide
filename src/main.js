@@ -1,35 +1,54 @@
 var chem = require("chem");
 var Vec2d = chem.vec2d;
 var perlin = require('./perlin');
+var STREAMER_SPEED = 0.001;
+var BRUSH_RADIUS = 6;
+var STREAMER_ARRIVE_THRESHOLD = 1;
 
 chem.onReady(function () {
   var canvas = document.getElementById("game");
   var engine = new chem.Engine(canvas);
+  var batch = new chem.Batch();
+  var streamers = [];
+
   var imageData = engine.context.getImageData(0, 0, engine.size.x, engine.size.y);
   var cells = initializeCells();
   renderAllCells();
-  var brushRadius = 6;
   engine.on('update', function (dt, dx) {
     if (engine.buttonState(chem.button.MouseLeft)) {
-      rasterCircle(engine.mousePos.x, engine.mousePos.y, brushRadius, function(x, y) {
+      rasterCircle(engine.mousePos.x, engine.mousePos.y, BRUSH_RADIUS, function(x, y) {
         var cell = cellAt(x, y);
         if (cell == null) return;
         cell.population += dx * 0.1;
         renderCell(y * engine.size.x + x);
       });
     }
+    if (engine.buttonJustPressed(chem.button.MouseRight)) {
+      var sprite = new chem.Sprite("car", { batch: batch });
+      streamers.push(new Streamer(engine.mousePos.clone(), engine.mousePos.offset(200, 200), sprite));
+    }
+    streamers.forEach(function(streamer) {
+      if (streamer.deleted) return;
+      streamer.pos.add(streamer.dir.scaled(STREAMER_SPEED));
+      if (streamer.pos.distance(streamer.dest) < STREAMER_ARRIVE_THRESHOLD) {
+        streamer.sprite.setAnimationName('explosion');
+        streamer.sprite.setFrameIndex(0);
+        streamer.sprite.on('animationend', function() {
+          streamer.deleted = true;
+          streamer.sprite.delete();
+        });
+      }
+    });
   });
   engine.on('draw', function (context) {
-    // clear canvas to black
-    context.fillStyle = '#000000'
-    context.fillRect(0, 0, engine.size.x, engine.size.y);
-
     context.putImageData(imageData, 0, 0);
+
+    engine.draw(batch);
 
     // draw circle where mouse is
     context.strokeStyle = '#000000';
     context.beginPath();
-    context.arc(engine.mousePos.x, engine.mousePos.y, brushRadius, 0, 2 * Math.PI, false);
+    context.arc(engine.mousePos.x, engine.mousePos.y, BRUSH_RADIUS, 0, 2 * Math.PI, false);
     context.closePath();
     context.stroke();
 
@@ -114,3 +133,12 @@ function rasterCircle(x0, y0, radius, cb) {
   }
 }
 
+function Streamer(pos, dest, sprite) {
+  this.pos = pos;
+  this.dest = dest;
+  this.dir = this.dest.minus(this.pos);
+  this.sprite = sprite;
+  this.sprite.pos = pos;
+  this.sprite.rotation = this.dir.angle();
+  this.deleted = false;
+}
