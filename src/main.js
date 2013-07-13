@@ -33,6 +33,12 @@ var uiWeapons = [
   },
 ];
 
+var Plague = {
+  KillRate: 10,
+  SpreadRate: 0,
+  StreamRate: 0,
+}
+
 chem.onReady(function () {
   var canvas = document.getElementById("game");
   var engine = new chem.Engine(canvas);
@@ -135,9 +141,9 @@ chem.onReady(function () {
       cells[i] = new Cell();
       var n = noise[i];
       if (n > 0.50) {
-        cells[i].population = (n - 0.50) / 0.50;
+        cells[i].setPopulation((n - 0.50) / 0.50);
       } else {
-        cells[i].population = 0;
+        cells[i].setPopulation(0);
       }
     }
     return cells;
@@ -202,10 +208,70 @@ chem.onReady(function () {
       currentCrosshair.scale.y = (target.radius * 2) / currentCrosshair.size.y;
     }
   }
+
+  function neighborsOf(x,y) {
+    // location y*engine.size.x + x
+    neighbors = new Array();
+    if (y > 0)                 neighbors.push(cellAt(x,y-1));
+    if (y < (engine.size.y-1)) neighbors.push(cellAt(x,y+1));
+    if (x > 0)                 neighbors.push(cellAt(x-1,y));
+    if (x < (engine.size.x-1)) neighbors.push(cellAt(x+1,y));
+    return neighbors;
+  }
+
+  function computePlagueSpread() {
+    for (var i = 0; i < cells.length; ++i) {
+      neighbors = neighborsOf(i/engine.size.x, i % engine.size.x);
+      for (var j = 0; j < neighbors.length; ++j) {
+        if (neighbors[i].canInfect()) neighbors[i].infect();
+      }
+
+    }
+  }
+
 });
+
+function Plague() {
+  this.KillRate = 10;
+  this.SpreadRate = 0;
+  this.StreamRate = 0;
+}
 
 function Cell() {
   this.population = 0;
+
+  this.populationHealthyAlive = 0;
+  this.populationInfectedAlive = 0;
+  this.populationHealthyDead = 0;
+  this.populationInfectedDead = 0;
+
+  this.canInfect = function() {
+    if (this.populationHealthyAlive > 0 &&
+        this.populationInfectedAlive <= 0) 
+    {
+      return true;
+    }
+  }
+
+  this.isInfected = function() {
+    if (this.populationInfectedAlive > 0) return true;
+    else return false;
+  }
+
+  this.infect = function() {
+    this.populationInfectedAlive = this.populationHealthyAlive;
+    this.populationHealthyAlive = 0;
+  }
+
+  this.setPopulation = function(healthy_ppl) {
+    this.population = healthy_ppl;
+    this.populationHealthyAlive = this.population;
+
+  }
+
+  this.computeUpdate = function() {
+    
+  }
 }
 
 function rasterCircle(x0, y0, radius, cb) {
