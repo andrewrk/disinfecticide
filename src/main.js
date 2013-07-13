@@ -25,12 +25,14 @@ chem.onReady(function () {
     }
     if (engine.buttonJustPressed(chem.button.MouseRight)) {
       var sprite = new chem.Sprite("car", { batch: batch });
-      streamers.push(new Streamer(engine.mousePos.clone(), engine.mousePos.offset(200, 200), sprite));
+      var xSprite = new chem.Sprite("x", { batch: batch });
+      streamers.push(new Streamer(engine.mousePos.clone(), engine.mousePos.offset(200, 200), sprite, xSprite));
     }
     streamers.forEach(function(streamer) {
       if (streamer.deleted) return;
       streamer.pos.add(streamer.dir.scaled(STREAMER_SPEED));
       if (streamer.pos.distance(streamer.dest) < STREAMER_ARRIVE_THRESHOLD) {
+        streamer.xSprite.delete();
         streamer.sprite.setAnimationName('explosion');
         streamer.sprite.setFrameIndex(0);
         streamer.sprite.on('animationend', function() {
@@ -43,6 +45,18 @@ chem.onReady(function () {
   engine.on('draw', function (context) {
     context.putImageData(imageData, 0, 0);
 
+    // draw lines from streamers to their destinations
+    context.strokeStyle = "#ff0000";
+    streamers.forEach(function(streamer) {
+      if (streamer.deleted) return;
+      context.beginPath()
+      context.moveTo(streamer.pos.x, streamer.pos.y);
+      context.lineTo(streamer.dest.x, streamer.dest.y);
+      context.closePath()
+      context.stroke();
+    });
+
+    // draw sprites
     engine.draw(batch);
 
     // draw circle where mouse is
@@ -133,7 +147,7 @@ function rasterCircle(x0, y0, radius, cb) {
   }
 }
 
-function Streamer(pos, dest, sprite) {
+function Streamer(pos, dest, sprite, xSprite) {
   this.pos = pos;
   this.dest = dest;
   this.dir = this.dest.minus(this.pos);
@@ -141,4 +155,7 @@ function Streamer(pos, dest, sprite) {
   this.sprite.pos = pos;
   this.sprite.rotation = this.dir.angle();
   this.deleted = false;
+  this.xSprite = xSprite;
+  this.xSprite.pos = dest;
+  this.xSprite.rotation = this.dir.angle();
 }

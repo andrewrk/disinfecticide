@@ -15,5 +15,6 @@ exports.spritesheet = {
       loop: false,
     },
     car: {},
+    x: {},
   }
 };
