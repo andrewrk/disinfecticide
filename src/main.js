@@ -8,7 +8,7 @@ var STREAMER_ARRIVE_THRESHOLD = 1;
 var worldSize = chem.vec2d(480, 480);
 var worldPos = chem.vec2d(240, 0);
 
-var weapons = [
+var uiWeapons = [
   { name: "gun"},
   { name: "bomb"},
   { name: "wall"},
@@ -21,11 +21,13 @@ chem.onReady(function () {
   var engine = new chem.Engine(canvas);
   var batch = new chem.Batch();
   var streamers = [];
+  var selectionSprite = new chem.Sprite('selection', {batch: batch, zOrder: 1});
 
   var imageData = engine.context.getImageData(worldPos.x, worldPos.x, worldSize.x, worldSize.y);
   var cells = initializeCells();
   renderAllCells();
   setUpUi();
+  selectWeapon(uiWeapons[0]);
   engine.on('mousemove', function() {
     var showCursor = engine.mousePos.x < worldPos.x;
     canvas.style.cursor = showCursor ? "default" : "none";
@@ -33,7 +35,7 @@ chem.onReady(function () {
   engine.on('update', function (dt, dx) {
     if (engine.buttonState(chem.button.MouseLeft)) {
       rasterCircle(engine.mousePos.x - worldPos.x, engine.mousePos.y - worldPos.y, BRUSH_RADIUS, function(x, y) {
-        if (inBounds(x, y)) {
+        if (inBounds(chem.vec2d(x, y))) {
           var cell = cellAt(x, y);
           cell.population += dx * 0.1;
           renderCell(y * worldSize.x + x);
@@ -41,13 +43,26 @@ chem.onReady(function () {
       });
     }
     if (engine.buttonJustPressed(chem.button.MouseRight)) {
-      var sprite = new chem.Sprite("car", { batch: batch });
-      var xSprite = new chem.Sprite("x", { batch: batch });
-      streamers.push(new Streamer(engine.mousePos.minus(worldPos), engine.mousePos.minus(worldPos).offset(200, 200), sprite, xSprite));
+      var relPos = engine.mousePos.minus(worldPos);
+      if (inBounds(relPos)) {
+        var sprite = new chem.Sprite("car", { batch: batch });
+        var xSprite = new chem.Sprite("x", { batch: batch });
+        streamers.push(new Streamer(relPos, relPos.offset(200, 200), sprite, xSprite));
+      }
+    }
+    if (engine.buttonJustPressed(chem.button.MouseLeft)) {
+      for (var i = 0; i < uiWeapons.length; ++i) {
+        var uiWeapon = uiWeapons[i];
+        if (uiWeapon.sprite.hitTest(engine.mousePos)) {
+          selectWeapon(uiWeapon);
+          break;
+        }
+      }
     }
     streamers.forEach(function(streamer) {
       if (streamer.deleted) return;
       streamer.pos.add(streamer.dir.scaled(STREAMER_SPEED));
+      streamer.sprite.pos = streamer.pos.plus(worldPos);
       if (streamer.pos.distance(streamer.dest) < STREAMER_ARRIVE_THRESHOLD) {
         streamer.xSprite.delete();
         streamer.sprite.setAnimationName('explosion');
@@ -71,8 +86,8 @@ chem.onReady(function () {
     streamers.forEach(function(streamer) {
       if (streamer.deleted) return;
       context.beginPath()
-      context.moveTo(streamer.pos.x, streamer.pos.y);
-      context.lineTo(streamer.dest.x, streamer.dest.y);
+      context.moveTo(streamer.sprite.pos.x, streamer.sprite.pos.y);
+      context.lineTo(streamer.xSprite.pos.x, streamer.xSprite.pos.y);
       context.closePath()
       context.stroke();
     });
@@ -135,19 +150,27 @@ chem.onReady(function () {
     return cells[y * worldSize.x + x];
   }
 
-  function inBounds(x, y) {
-    return x >= 0 && y >= 0 && x < worldSize.x && y < worldSize.y;
+  function inBounds(v) {
+    return v.x >= 0 && v.y >= 0 && v.x < worldSize.x && v.y < worldSize.y;
   }
 
   function setUpUi() {
     var pos = chem.vec2d(10, 10);
-    for (var i = 0; i < weapons.length; ++i) {
-      weapons[i].sprite = new chem.Sprite(weapons[i].name, {
+    for (var i = 0; i < uiWeapons.length; ++i) {
+      uiWeapons[i].sprite = new chem.Sprite(uiWeapons[i].name, {
         batch: batch,
         pos: pos.clone(),
       });
-      pos.y += weapons[i].sprite.size.y;
+      pos.y += uiWeapons[i].sprite.size.y;
     }
+  }
+  function selectWeapon(target) {
+    uiWeapons.forEach(function(uiWeapon) {
+      uiWeapon.selected = false;
+    });
+    target.selected = true;
+    selectionSprite.pos = target.sprite.pos;
+    selectionSprite.setFrameIndex(0);
   }
 });
 
@@ -189,10 +212,10 @@ function Streamer(pos, dest, sprite, xSprite) {
   this.dest = dest;
   this.dir = this.dest.minus(this.pos);
   this.sprite = sprite;
-  this.sprite.pos = pos;
+  this.sprite.pos = pos.plus(worldPos);
   this.sprite.rotation = this.dir.angle();
   this.deleted = false;
   this.xSprite = xSprite;
-  this.xSprite.pos = dest;
+  this.xSprite.pos = dest.plus(worldPos);
   this.xSprite.rotation = this.dir.angle();
 }

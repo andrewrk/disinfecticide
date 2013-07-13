@@ -31,5 +31,10 @@ exports.spritesheet = {
     curebomb: {
       anchor: "topleft",
     },
+    selection: {
+      anchor: "topleft",
+      loop: true,
+      delay: 0.1,
+    },
   }
 };
