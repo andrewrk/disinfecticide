@@ -40,14 +40,20 @@ chem.onReady(function () {
 
   function initializeCells() {
     var cells = new Array(engine.size.x * engine.size.y);
+    var x = 0, y = 0;
     for (var i = 0; i < cells.length; ++i) {
       cells[i] = new Cell();
+      renderCell(cells[i], x, y);
+      x += 1;
+      if (x >= engine.size.x) {
+        x = 0;
+        y += 1;
+      }
     }
     return cells;
   }
 
   function renderCell(cell, x, y) {
-    debugger
     var index = (imageData.width * y + x) * 4;
     var value = 255 - (cell.population * 255);
     imageData.data[index + 0] = value; // red
@@ -66,26 +72,36 @@ function Cell() {
 }
 
 function rasterCircle(x0, y0, radius, cb) {
-  var x = radius;
-  var y = 0;
-  var radiusError = 1 - x;
+  var f = 1 - radius;
+  var ddF_x = 1;
+  var ddF_y = -2 * radius;
+  var x = 0;
+  var y = radius;
 
-  while (x >= y) {
-    cb( x + x0,  y + y0);
-    cb( y + x0,  x + y0);
-    cb(-x + x0,  y + y0);
-    cb(-y + x0,  x + y0);
-    cb(-x + x0, -y + y0);
-    cb(-y + x0, -x + y0);
-    cb( x + x0, -y + y0);
-    cb( y + x0, -x + y0);
+  cb(x0, y0 + radius);
+  cb(x0, y0 - radius);
+  cb(x0 + radius, y0);
+  cb(x0 - radius, y0);
 
-    y += 1;
-    if (radiusError < 0) {
-      radiusError += 2 * y + 1;
-    } else {
-      x -= 1;
-      radiusError += 2 * (y - x + 1);
+  while(x < y) {
+    // ddF_x == 2 * x + 1;
+    // ddF_y == -2 * y;
+    // f == x*x + y*y - radius*radius + 2*x - y + 1;
+    if(f >= 0) {
+      y--;
+      ddF_y += 2;
+      f += ddF_y;
     }
+    x++;
+    ddF_x += 2;
+    f += ddF_x;
+    cb(x0 + x, y0 + y);
+    cb(x0 - x, y0 + y);
+    cb(x0 + x, y0 - y);
+    cb(x0 - x, y0 - y);
+    cb(x0 + y, y0 + x);
+    cb(x0 - y, y0 + x);
+    cb(x0 + y, y0 - x);
+    cb(x0 - y, y0 - x);
   }
 }
