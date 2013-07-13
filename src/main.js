@@ -86,39 +86,31 @@ function Cell() {
 }
 
 function rasterCircle(x0, y0, radius, cb) {
-  var f = 1 - radius;
-  var ddF_x = 1;
-  var ddF_y = -2 * radius;
-  var x = 0;
-  var y = radius;
+  var x = radius;
+  var y = 0;
+  var xChange = 1 - (radius * 2);
+  var yChange = 0;
+  var radiusError = 0;
 
-  cb(x0, y0 + radius);
-  cb(x0, y0 - radius);
-  cb(x0 + radius, y0);
-  cb(x0 - radius, y0);
-
-  while(x < y) {
-    // ddF_x == 2 * x + 1;
-    // ddF_y == -2 * y;
-    // f == x*x + y*y - radius*radius + 2*x - y + 1;
-    if(f >= 0) {
-      y--;
-      ddF_y += 2;
-      f += ddF_y;
+  var i;
+  while(x >= y) {
+    for (i = x0 - x; i <= x0 + x; ++i) {
+      cb(i,  y + y0);
+      cb(i, -y + y0);
     }
-    x++;
-    ddF_x += 2;
-    f += ddF_x;
-    cb(x0 + x, y0 + y);
-    cb(x0 - x, y0 + y);
+    for (i = x0 - y; i <= x0 + y; ++i) {
+      cb(i,  x + y0);
+      cb(i, -x + y0);
+    }
 
-    cb(x0 + x, y0 - y);
-    cb(x0 - x, y0 - y);
-
-    cb(x0 + y, y0 + x);
-    cb(x0 - y, y0 + x);
-
-    cb(x0 + y, y0 - x);
-    cb(x0 - y, y0 - x);
+    y++;
+    radiusError += yChange;
+    yChange += 2;
+    if (radiusError * 2 + xChange > 0) {
+      x--;
+      radiusError += xChange;
+      xChange += 2;
+    }
   }
 }
+
