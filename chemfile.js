@@ -16,5 +16,20 @@ exports.spritesheet = {
     },
     car: {},
     x: {},
+    bomb: {
+      anchor: "topleft",
+    },
+    wall: {
+      anchor: "topleft",
+    },
+    gun: {
+      anchor: "topleft",
+    },
+    disinfecticide: {
+      anchor: "topleft",
+    },
+    curebomb: {
+      anchor: "topleft",
+    },
   }
 };
