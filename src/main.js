@@ -385,8 +385,8 @@ chem.onReady(function () {
 
     var gridWidth  = worldSize.x / nx;
     var gridHeight = worldSize.y / ny;
-    
-    var populationCenters = new Array();
+
+    var populationCenters = [];
     for (var i=0; i < nx; i++) {
       for (var j=0; j < ny; j++) {
         var maxHealthy = 0;
@@ -394,7 +394,7 @@ chem.onReady(function () {
 
         for (var kx = Math.floor(gridWidth*i); kx < gridWidth*i + gridWidth-1; kx++) {
           for (var ky = Math.floor(gridHeight*j); ky < gridHeight*j + gridHeight-1; ky++) {
-            c = cellAt(kx,ky);
+            var c = cellAt(kx,ky);
             if (c.populationHealthyAlive > maxHealthy && c.populationInfectedAlive <= 0) {
               maxHealthy = c.populationHealthyAlive;
               maxHealthyIdx = c.index;
@@ -501,14 +501,15 @@ chem.onReady(function () {
             Math.random() < STREAMER_SCHEDULE_PROBABILITY &&
             streamers.length < MAX_CONCURRENT_STREAMERS)
         {
-          var sprite = new chem.Sprite("car", { batch: batch });
+          var sprite = new chem.Sprite("infected-car", { batch: batch });
 
-          healthyCenters = findHealthyPopulationCenters(50,50);
-          if (healthyCenters.length > 0) 
-            var destIdx = healthyCenters[ Math.floor( Math.random() * healthyCenters.length ) ];
+          var  healthyCenters = findHealthyPopulationCenters(50,50);
+          var destIdx;
+          if (healthyCenters.length > 0)
+            destIdx = healthyCenters[ Math.floor( Math.random() * healthyCenters.length ) ];
           else { // no more healthy places? go to places that used to be... 
             var populationCenterIdx = Math.floor( Math.random() * populationCenters.length );
-            var destIdx = populationCenters[populationCenterIdx]
+            destIdx = populationCenters[populationCenterIdx]
           }
 
           var destLoc = new Vec2d(destIdx%worldSize.x, Math.floor(destIdx/worldSize.x));

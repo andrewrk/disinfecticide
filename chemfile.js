@@ -15,6 +15,9 @@ exports.spritesheet = {
       loop: false,
     },
     car: {},
+    'infected-car': {
+      delay: 0.1,
+    },
     x: {},
     bomb: {
       frames: "bomb.png",
