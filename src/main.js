@@ -5,7 +5,10 @@ var STREAMER_SPEED = 0.001;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var MAX_CELL_POPULATION = 10000;
 var PLAGUE_KILL_RATE = 5;
-var STREAMER_SCHEDULE_PROBABILITY = 0.01;
+var STREAMER_SCHEDULE_PROBABILITY = 0.0005;
+
+var populationCenters = new Array();
+
 
 var worldSize = chem.vec2d(480, 480);
 var worldPos = chem.vec2d(240, 0);
@@ -125,7 +128,6 @@ chem.onReady(function () {
     if (stepCounter > stepThreshold) {
       computePlagueSpread();
       updateCells();
-      computeStreamers();
 
       stepCounter -= stepThreshold;
     }
@@ -206,10 +208,15 @@ chem.onReady(function () {
     });
     var cells = new Array(worldSize.x * worldSize.y);
     for (var i = 0; i < cells.length; ++i) {
-      cells[i] = new Cell();
+      cells[i] = new Cell(i);
       var n = noise[i];
       if (n > 0.70) {
         cells[i].addHealthyPopulation( ((n-0.7)/0.3)*MAX_CELL_POPULATION );
+        
+        // staticly initialize targets for streamers to try and go to
+        if (n > 0.90 && Math.random() < 0.2) {
+          populationCenters.push(i);
+        }
       }
     }
 
@@ -314,17 +321,27 @@ chem.onReady(function () {
     for (var i = 0; i < cells.length; ++i) {
       cells[i].justInfected = false;
       if (cells[i].computeUpdate()) renderCell(i);
-    }
-  }
 
-  function computeStreamers() {
-    if (Math.random() <= STREAMER_SCHEDULE_PROBABILITY) {
+      // Streamer logic
+      if (cells[i].populationInfectedDead > 0.2 * cells[i].totalPopulation() &&
+          Math.random() < STREAMER_SCHEDULE_PROBABILITY)
+      {
         var sprite = new chem.Sprite("car", { batch: batch });
         var xSprite = new chem.Sprite("x", { batch: batch });
-        
 
-        //streamers.push(new Streamer(new Vec2d(200,200), new Vec2d(400,400), sprite, xSprite));
+        var populationCenterIdx = Math.floor( Math.random() * populationCenters.length );
+        var destIdx = populationCenters[populationCenterIdx]
+
+        // var y = Math.floor(i/worldSize.x);
+        // var x = i%worldSize.x;
+        var destLoc = new Vec2d(destIdx%worldSize.x, Math.floor(destIdx/worldSize.x));
+        var srcLoc = new Vec2d(i%worldSize.x, Math.floor(i/worldSize.x));
+        streamers.push(new Streamer(srcLoc, destLoc, sprite, xSprite));
     }
+
+
+    }
+
   }
 
   function computePlagueSpread() {
@@ -344,6 +361,9 @@ chem.onReady(function () {
 
       // so that we don't double count infections 
       if (cells[i].justInfected) continue;
+
+      // add as a potential source of streamer
+      
 
       // four neighbors
       if (y > 0 && cellAt(x,y-1).canInfect()) {
@@ -394,11 +414,12 @@ chem.onReady(function () {
   }
 });
 
-function Cell() {
+function Cell(idx) {
   this.populationHealthyAlive = 0;
   this.populationInfectedAlive = 0;
   this.populationHealthyDead = 0;
   this.populationInfectedDead = 0;
+  this.index = idx;
 
   this.justInfected = false;
 }
