@@ -368,6 +368,7 @@ function Cell() {
 
 Cell.prototype.addHealthyPopulation = function(population) {
   this.populationHealthyAlive += population;
+  if (this.populationHealthyAlive > MAX_POPULATION) this.populationHealthyAlive = MAX_POPULATION;
 }
 
 Cell.prototype.canInfect = function() {
