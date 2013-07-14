@@ -316,7 +316,7 @@ chem.onReady(function () {
     var cell = cells[i];
     var index = i * 4;
     var density = 255 - (cell.density() * 255);
-    var blendConstant = 0.5;
+    var blendConstant = 0.2;
 
     if (cell.populationInfectedAlive > 0) {
       imageData.data[index + 0] = Math.floor(density*blendConstant + colorInfectedAlive.red  *(1-blendConstant));
