@@ -4,6 +4,7 @@ var perlin = require('./perlin');
 var STREAMER_SPEED = 0.001;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var MAX_POPULATION = 10000;
+var PLAGUE_KILL_RATE = 100;
 
 var worldSize = chem.vec2d(480, 480);
 var worldPos = chem.vec2d(240, 0);
@@ -122,6 +123,8 @@ chem.onReady(function () {
     stepCounter += 1;
     if (stepCounter > stepThreshold) {
       computePlagueSpread();
+      updateCells();
+
       stepCounter -= stepThreshold;
     }
 
@@ -286,6 +289,13 @@ chem.onReady(function () {
     }
   }
 
+  function updateCells() {
+    for (var i = 0; i < cells.length; ++i) {
+      cells[i].justInfected = false;
+      if (cells[i].computeUpdate()) renderCell(i);
+    }
+  }
+
   function computePlagueSpread() {
     pie[0].stat = 0;
     pie[1].stat = 0;
@@ -349,11 +359,6 @@ chem.onReady(function () {
         renderCell(i-worldSize.x+1);
       }
     }
-
-    for (var i = 0; i < cells.length; ++i) {
-      cells[i].justInfected = false;
-    }
-
   }
 });
 
@@ -364,6 +369,21 @@ function Cell() {
   this.populationInfectedDead = 0;
 
   this.justInfected = false;
+}
+
+Cell.prototype.computeUpdate = function() {
+  if (!this.isInfected()) return;
+
+  this.populationHealthyAlive -= PLAGUE_KILL_RATE;
+  this.populationInfectedDead += PLAGUE_KILL_RATE;
+  if (this.populationInfectedDead > MAX_POPULATION) this.populationInfectedDead = MAX_POPULATION;
+
+  if (this.populationHealthyAlive < 0) {
+    this.populationHealthyAlive = 0;
+    return true; // returns true if redraw needed
+  }
+
+  return false;
 }
 
 Cell.prototype.addHealthyPopulation = function(population) {
