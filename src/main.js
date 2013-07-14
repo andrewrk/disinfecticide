@@ -151,8 +151,8 @@ chem.onReady(function () {
     for (var i = 0; i < cells.length; ++i) {
       cells[i] = new Cell();
       var n = noise[i];
-      if (n > 0.50) {
-        cells[i].setPopulation((n - 0.50) / 0.50);
+      if (n > 0.70) {
+        cells[i].setPopulation((n - 0.70) / 0.30);
       } else {
         cells[i].setPopulation(0);
       }
@@ -165,8 +165,6 @@ chem.onReady(function () {
       continue;
     }
     cells[searchIdx].infect();
-
-    
 
     return cells;
   }
@@ -186,7 +184,7 @@ chem.onReady(function () {
       imageData.data[index + 0] = Math.floor(value*blendConstant + 255*(1-blendConstant));
       imageData.data[index + 1] = Math.floor(value*blendConstant);
       imageData.data[index + 2] = Math.floor(value*blendConstant);
-    } else { 
+    } else {
       imageData.data[index + 0] = value; // red
       imageData.data[index + 1] = value; // green
       imageData.data[index + 2] = value; // blue
@@ -245,7 +243,7 @@ chem.onReady(function () {
       var x = i%worldSize.x;
 
       if (!cells[i].isInfected()) continue;
-      
+
       // hack to not double count
       if (cells[i].justInfected) {
         cells[i].justInfected = false;
@@ -255,7 +253,7 @@ chem.onReady(function () {
       if (y > 0 && cellAt(x,y-1).canInfect()) {
         cellAt(x,y-1).infect();
         renderCell(i-worldSize.x);
-      }      
+      }
 
       if (y < (worldSize.y-1) && cellAt(x,y+1).canInfect()) {
         cellAt(x,y+1).infect();
@@ -293,10 +291,7 @@ function Cell() {
 }
 
 Cell.prototype.canInfect = function() {
-  if (this.populationHealthyAlive > 0 &&
-      this.populationInfectedAlive <= 0)
-       return true;
-  else return false; 
+  return this.populationHealthyAlive > 0 && this.populationInfectedAlive <= 0;
 }
 
 Cell.prototype.isInfected = function() {
