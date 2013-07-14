@@ -10,7 +10,6 @@ var STREAMER_SCHEDULE_PROBABILITY = 0.0005;
 
 var populationCenters = [];
 
-
 var worldSize = chem.vec2d(480, 480);
 var worldPos = chem.vec2d(240, 0);
 
@@ -124,6 +123,15 @@ chem.onReady(function () {
         streamer.xSprite.delete();
         streamer.sprite.setAnimationName('explosion');
         streamer.sprite.setFrameIndex(0);
+        
+        //streamer.dest.x, streamer.dest.y
+        var destCell = cellAt(streamer.dest.x, streamer.dest.y);
+        if (destCell.canInfect()) {
+          destCell.infect();
+          renderCell(destCell.index);
+          destCell.justInfected = false;
+        }
+
         streamer.sprite.on('animationend', function() {
           streamer.deleted = true;
           streamer.sprite.delete();
@@ -289,7 +297,7 @@ chem.onReady(function () {
         cells[i].addHealthyPopulation( ((n-0.7)/0.3)*MAX_CELL_POPULATION );
         
         // staticly initialize targets for streamers to try and go to
-        if (n > 0.90 && Math.random() < 0.2) {
+        if (n > 0.80) {
           populationCenters.push(i);
         }
       }
