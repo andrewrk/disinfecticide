@@ -1,6 +1,7 @@
 var chem = require("chem");
 var Vec2d = chem.vec2d;
 var perlin = require('./perlin');
+var Color = require('./color');
 var STREAMER_SPEED = 0.001;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var MAX_CELL_POPULATION = 10000;
@@ -42,20 +43,26 @@ var uiWeapons = [
 var stepCounter = 0;
 var stepThreshold = 20;
 
+var colorUninhabited = new Color("#ffffff");
+var colorHealthyAlive = new Color("#ff83e9");
+var colorInfectedAlive = new Color("#e13e3a");
+var colorInfectedDead = new Color("#008817");
+var colorHealthyDead = new Color("#585858");
+
 var pie = [
   {
     name: "Healthy",
-    color: "#FF83E9",
+    color: colorHealthyAlive.toString(),
     stat: 0,
   },
   {
     name: "Infected",
-    color: "#E13E3A",
+    color: colorInfectedAlive.toString(),
     stat: 0,
   },
   {
     name: "Dead",
-    color: "#585858",
+    color: colorHealthyDead.toString(),
     stat: 0,
   },
 ];
@@ -157,7 +164,12 @@ chem.onReady(function () {
 
     var pieMargin = 10;
     var pieRadius = (worldPos.x - pieMargin * 2) / 2;
-    drawStatsPieChart(context, pieMargin + pieRadius, engine.size.y - pieRadius - pieMargin, pieRadius);
+    var pieLoc = chem.vec2d(pieMargin + pieRadius, engine.size.y - pieRadius - pieMargin);
+    drawStatsPieChart(context, pieLoc.x, pieLoc.y, pieRadius);
+
+    var spotInfoSize = chem.vec2d(pieRadius * 2, 50);
+    var spotInfoLoc = pieLoc.offset(-pieRadius, -pieRadius - pieMargin - spotInfoSize.y);
+    drawSpotInfo(context, spotInfoLoc, spotInfoSize);
 
     // draw a little fps counter in the corner
     context.fillStyle = '#000000'
@@ -165,6 +177,69 @@ chem.onReady(function () {
   });
   engine.start();
   canvas.focus();
+
+  function drawSpotInfo(context, pos, size) {
+    var relMousePos = engine.mousePos.minus(worldPos);
+    if (! inBounds(relMousePos)) return;
+    var cell = cellAt(relMousePos.x, relMousePos.y);
+    var items = [];
+    if (cell.totalPopulation() === 0) {
+      items.push({
+        color: colorUninhabited.toString(),
+        caption: "Uninhabited",
+      });
+    }
+    if (cell.populationHealthyAlive > 0) {
+      items.push({
+        color: colorHealthyAlive.toString(),
+        caption: "Healthy: " + Math.floor(cell.populationHealthyAlive),
+      });
+    }
+    if (cell.populationInfectedAlive > 0) {
+      items.push({
+        color: colorInfectedAlive.toString(),
+        caption: "Infected: " + Math.floor(cell.populationInfectedAlive),
+      });
+    }
+    if (cell.populationHealthyDead > 0) {
+      items.push({
+        color: colorHealthyDead.toString(),
+        caption: "Dead: " + Math.floor(cell.populationHealthyDead),
+      });
+    }
+    if (cell.populationInfectedDead > 0) {
+      items.push({
+        color: colorInfectedDead.toString(),
+        caption: "Rotting Corpses: " + Math.floor(cell.populationInfectedDead),
+      });
+    }
+    var margin = 4;
+    var boxSize = 16;
+    var y = pos.y + margin;
+    items.forEach(function(item) {
+      context.beginPath();
+      context.rect(pos.x + margin, y, boxSize, boxSize);
+      context.closePath();
+      context.fillStyle = item.color;
+      context.fill();
+      context.strokeStyle = "#000000";
+      context.lineWidth = 1;
+      context.stroke();
+
+      context.font = "13pt Arial";
+      context.textAlign = "left";
+      context.fillStyle = "#000000";
+      context.fillText(item.caption, pos.x + margin + boxSize + margin, y + boxSize);
+
+      y += boxSize + margin;
+    });
+    context.beginPath();
+    context.rect(pos.x, pos.y, size.x, size.y);
+    context.closePath();
+    context.strokeStyle = "#000000";
+    context.lineWidth = 2;
+    context.stroke();
+  }
 
   function drawStatsPieChart(context, x, y, radius) {
     var total = 0;
@@ -250,21 +325,21 @@ chem.onReady(function () {
     var blendConstant = 0.5;
 
     if (cell.populationInfectedAlive > 0) {
-      imageData.data[index + 0] = Math.floor(density*blendConstant + 225*(1-blendConstant));
-      imageData.data[index + 1] = Math.floor(density*blendConstant +  62*(1-blendConstant));
-      imageData.data[index + 2] = Math.floor(density*blendConstant +  58*(1-blendConstant));
+      imageData.data[index + 0] = Math.floor(density*blendConstant + colorInfectedAlive.red  *(1-blendConstant));
+      imageData.data[index + 1] = Math.floor(density*blendConstant + colorInfectedAlive.green*(1-blendConstant));
+      imageData.data[index + 2] = Math.floor(density*blendConstant + colorInfectedAlive.blue *(1-blendConstant));
     } else if (cell.populationInfectedDead > 0) {
-      imageData.data[index + 0] = Math.floor(density*blendConstant +   0*(1-blendConstant));
-      imageData.data[index + 1] = Math.floor(density*blendConstant + 136*(1-blendConstant));
-      imageData.data[index + 2] = Math.floor(density*blendConstant +  23*(1-blendConstant));
+      imageData.data[index + 0] = Math.floor(density*blendConstant + colorInfectedDead.red*(1-blendConstant));
+      imageData.data[index + 1] = Math.floor(density*blendConstant + colorInfectedDead.green*(1-blendConstant));
+      imageData.data[index + 2] = Math.floor(density*blendConstant + colorInfectedDead.blue*(1-blendConstant));
     } else if (cell.populationHealthyAlive > 0) {
-      imageData.data[index + 0] = Math.floor(density*blendConstant + 255*(1-blendConstant));
-      imageData.data[index + 1] = Math.floor(density*blendConstant + 131*(1-blendConstant));
-      imageData.data[index + 2] = Math.floor(density*blendConstant + 233*(1-blendConstant));
+      imageData.data[index + 0] = Math.floor(density*blendConstant + colorHealthyAlive.red  *(1-blendConstant));
+      imageData.data[index + 1] = Math.floor(density*blendConstant + colorHealthyAlive.green*(1-blendConstant));
+      imageData.data[index + 2] = Math.floor(density*blendConstant + colorHealthyAlive.blue *(1-blendConstant));
     } else if (cell.populationHealthyDead > 0) {
-      imageData.data[index + 0] = Math.floor(density*blendConstant +  88*(1-blendConstant));
-      imageData.data[index + 1] = Math.floor(density*blendConstant +  88*(1-blendConstant));
-      imageData.data[index + 2] = Math.floor(density*blendConstant +  88*(1-blendConstant));
+      imageData.data[index + 0] = Math.floor(density*blendConstant + colorHealthyDead.red  *(1-blendConstant));
+      imageData.data[index + 1] = Math.floor(density*blendConstant + colorHealthyDead.green*(1-blendConstant));
+      imageData.data[index + 2] = Math.floor(density*blendConstant + colorHealthyDead.blue *(1-blendConstant));
     } else {
       imageData.data[index + 0] = density; // red
       imageData.data[index + 1] = density; // green
