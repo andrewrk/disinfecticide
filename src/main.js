@@ -4,7 +4,8 @@ var Color = require('./color');
 var STREAMER_SPEED = 0.20;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var MAX_CELL_POPULATION = 10000;
-var PLAGUE_KILL_RATE = 5;
+var PLAGUE_KILL_RATE = 0.01;
+var PLAGUE_KILL_CONSTANT = 2;
 var STREAMER_SCHEDULE_PROBABILITY = 0.0005;
 var MAX_CONCURRENT_STREAMERS = 10;
 
@@ -474,7 +475,7 @@ Cell.prototype.computeUpdate = function() {
   if (!this.isInfected()) return;
 
   // DIE FATAL LETHAL!!!
-  var amountToKill = Math.min(PLAGUE_KILL_RATE, this.populationInfectedAlive);
+  var amountToKill = Math.min(PLAGUE_KILL_CONSTANT + PLAGUE_KILL_RATE * this.populationInfectedAlive, this.populationInfectedAlive);
   this.populationInfectedAlive -= amountToKill;
   this.populationInfectedDead += amountToKill;
 
