@@ -192,6 +192,7 @@ chem.onReady(function () {
   function shootGun() {
     var targetPos = engine.mousePos.minus(worldPos);
 
+    var casualties = 0;
     rasterCircle(targetPos.x, targetPos.y, GUN_RADIUS, function(x, y) {
       var cell = cellAt(x, y);
 
@@ -200,18 +201,20 @@ chem.onReady(function () {
       cell.populationInfectedAlive -= infectedKillAmt;
       cell.populationHealthyDead += infectedKillAmt;
       pie[PIE_STAT_CASUALTIES].stat += infectedKillAmt;
+      casualties += infectedKillAmt;
 
       var healthyKillAmt = Math.min(cell.populationHealthyAlive,
         cell.populationHealthyAlive * GUN_HEALTHY_KILL_RATE + GUN_HEALTHY_KILL_CONSTANT);
       cell.populationHealthyAlive -= healthyKillAmt;
       cell.populationHealthyDead += healthyKillAmt;
       pie[PIE_STAT_CASUALTIES].stat += healthyKillAmt;
+      casualties += healthyKillAmt;
 
       renderCell(cellIndex(x, y));
     });
 
     gunSound.play();
-    screamingSound.play();
+    if (casualties >= 1) screamingSound.play();
   }
 
   function cullDeletedStreamers() {
