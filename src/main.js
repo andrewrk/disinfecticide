@@ -69,6 +69,7 @@ chem.onReady(function () {
         if (inBounds(chem.vec2d(x, y))) {
           var cell = cellAt(x, y);
           cell.population += dx * 0.1;
+          if (cell.population > 1) cell.population = 1;
           renderCell(y * worldSize.x + x);
         }
       });
@@ -158,7 +159,7 @@ chem.onReady(function () {
     }
 
     // infect a pixel near the center to start us off
-    var searchIdx = Math.floor(engine.size.y/2) * engine.size.x + Math.floor(engine.size.x/2);
+    var searchIdx = Math.floor(worldSize.y/2) * worldSize.x + Math.floor(worldSize.x/2);
     while (searchIdx < cells.length && !cells[searchIdx].canInfect()) {
       searchIdx++;
       continue;
@@ -181,15 +182,15 @@ chem.onReady(function () {
     var value = 255 - (cell.population * 255);
 
     if (cell.isInfected()) {
-      var blendConstant = 0.2;
+      var blendConstant = 0.5;
       imageData.data[index + 0] = Math.floor(value*blendConstant + 255*(1-blendConstant));
       imageData.data[index + 1] = Math.floor(value*blendConstant);
       imageData.data[index + 2] = Math.floor(value*blendConstant);
     } else { 
       imageData.data[index + 0] = value; // red
+      imageData.data[index + 1] = value; // green
+      imageData.data[index + 2] = value; // blue
     }
-    imageData.data[index + 1] = value; // green
-    imageData.data[index + 2] = value; // blue
     imageData.data[index + 3] = 255;   // alpha
   }
 
@@ -240,8 +241,8 @@ chem.onReady(function () {
   function computePlagueSpread() {
 
     for (var i = 0; i < cells.length; ++i) {
-      var y = Math.floor(i/engine.size.x);
-      var x = i%engine.size.x;
+      var y = Math.floor(i/worldSize.x);
+      var x = i%worldSize.x;
 
       if (!cells[i].isInfected()) continue;
       
@@ -253,12 +254,12 @@ chem.onReady(function () {
 
       if (y > 0 && cellAt(x,y-1).canInfect()) {
         cellAt(x,y-1).infect();
-        renderCell(i-engine.size.x);
+        renderCell(i-worldSize.x);
       }      
 
-      if (y < (engine.size.y-1) && cellAt(x,y+1).canInfect()) {
+      if (y < (worldSize.y-1) && cellAt(x,y+1).canInfect()) {
         cellAt(x,y+1).infect();
-        renderCell(i+engine.size.x);
+        renderCell(i+worldSize.x);
       }
 
       if (x > 0 && cellAt(x-1,y).canInfect()) {
@@ -266,7 +267,7 @@ chem.onReady(function () {
         renderCell(i-1);
       }
 
-      if (x < (engine.size.x-1) && cellAt(x+1,y).canInfect()) {
+      if (x < (worldSize.x-1) && cellAt(x+1,y).canInfect()) {
         cellAt(x+1,y).infect();
         renderCell(i+1);
       }
@@ -304,6 +305,7 @@ Cell.prototype.isInfected = function() {
 }
 
 Cell.prototype.infect = function() {
+  if (cell.population > 1) cell.population = 1;
   this.populationInfectedAlive = this.populationHealthyAlive;
   this.populationHealthyAlive = 0;
   this.justInfected = true;
