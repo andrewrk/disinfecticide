@@ -6,6 +6,7 @@ var commaIt = require('comma-it').commaIt;
 var STREAMER_SPEED = 0.20;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var STREAMER_RADIUS = 12;
+var STREAMER_MAX_PEOPLE = 100;
 var MAX_CELL_POPULATION = 10000;
 var PLAGUE_KILL_RATE = 0.0025;
 var PLAGUE_KILL_CONSTANT = 0.005;
@@ -539,10 +540,10 @@ chem.onReady(function () {
         cells[i].justInfected = false;
         if (cells[i].computeUpdate()) renderCell(i);
 
-        // Streamer logic
-        if ((cells[i].populationInfectedDead + cells[i].populationHealthyDead) > 0.2 * cells[i].totalPopulation() &&
-            Math.random() < STREAMER_SCHEDULE_PROBABILITY &&
-            streamers.length < MAX_CONCURRENT_STREAMERS)
+        // Infected streamers
+        if (cells[i].populationInfectedAlive > 0.3 * cells[i].totalPopulation() &&
+             Math.random() < STREAMER_SCHEDULE_PROBABILITY &&
+             streamers.length < MAX_CONCURRENT_STREAMERS)
         {
           var sprite = new chem.Sprite("infected-car", { batch: batch });
 
@@ -555,9 +556,12 @@ chem.onReady(function () {
             destIdx = populationCenters[populationCenterIdx]
           }
 
+          var numInfected = Math.min( cells[i].populationInfectedAlive, STREAMER_MAX_PEOPLE );
+          cells[i].populationInfectedAlive -= numInfected;
+
           var destLoc = new Vec2d(destIdx%worldSize.x, Math.floor(destIdx/worldSize.x));
           var srcLoc = new Vec2d(x, y);
-          streamers.push(new Streamer(srcLoc, destLoc, sprite));
+          streamers.push(new Streamer(srcLoc, destLoc, sprite, 0, numInfected));
         }
 
         i += 1;
@@ -565,9 +569,27 @@ chem.onReady(function () {
     }
   }
 
+  function numHealthyInStreamers() {
+    var totalHealthy = 0;
+
+    for (var s in streamers) {
+      totalHealthy += s.populationHealthyAlive;
+    }
+    return totalHealthy;
+  }
+
+  function numInfectedInStreamers() {
+    var totalInfected = 0;
+
+    for (var s in streamers) {
+      totalInfected += this.populationInfectedAlive;
+    }
+    return totalInfected;
+  }
+
   function computePlagueSpread() {
-    pie[PIE_STAT_HEALTHY].stat = 0;
-    pie[PIE_STAT_INFECTED].stat = 0;
+    pie[PIE_STAT_HEALTHY].stat = numHealthyInStreamers();
+    pie[PIE_STAT_INFECTED].stat = numInfectedInStreamers();
     pie[PIE_STAT_DEAD].stat = -pie[PIE_STAT_CASUALTIES].stat;
 
     var i = 0;
@@ -692,7 +714,7 @@ function rasterCircle(x0, y0, radius, cb) {
   }
 }
 
-function Streamer(pos, dest, sprite) {
+function Streamer(pos, dest, sprite, num_healthy, num_infected) {
   this.pos = pos;
   this.dest = dest;
   this.dir = this.dest.minus(this.pos).normalize();
@@ -700,6 +722,8 @@ function Streamer(pos, dest, sprite) {
   this.sprite.pos = pos.plus(worldPos);
   this.sprite.rotation = this.dir.angle();
   this.deleted = false;
+  this.populationHealthyAlive = num_healthy;
+  this.populationInfectedAlive = num_infected;
 }
 
 function displayNumber(n) {
