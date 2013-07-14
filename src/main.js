@@ -197,6 +197,7 @@ chem.onReady(function () {
 
     var casualties = 0;
     rasterCircle(targetPos.x, targetPos.y, GUN_RADIUS, function(x, y) {
+      if (!inBounds(new Vec2d(x, y))) return;
       var cell = cellAt(x, y);
 
       var infectedKillAmt = Math.min(cell.populationInfectedAlive,
