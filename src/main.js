@@ -5,6 +5,7 @@ var STREAMER_SPEED = 0.001;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var MAX_CELL_POPULATION = 10000;
 var PLAGUE_KILL_RATE = 5;
+var STREAMER_SCHEDULE_PROBABILITY = 0.01;
 
 var worldSize = chem.vec2d(480, 480);
 var worldPos = chem.vec2d(240, 0);
@@ -124,6 +125,7 @@ chem.onReady(function () {
     if (stepCounter > stepThreshold) {
       computePlagueSpread();
       updateCells();
+      computeStreamers();
 
       stepCounter -= stepThreshold;
     }
@@ -312,6 +314,16 @@ chem.onReady(function () {
     for (var i = 0; i < cells.length; ++i) {
       cells[i].justInfected = false;
       if (cells[i].computeUpdate()) renderCell(i);
+    }
+  }
+
+  function computeStreamers() {
+    if (Math.random() <= STREAMER_SCHEDULE_PROBABILITY) {
+        var sprite = new chem.Sprite("car", { batch: batch });
+        var xSprite = new chem.Sprite("x", { batch: batch });
+        
+
+        //streamers.push(new Streamer(new Vec2d(200,200), new Vec2d(400,400), sprite, xSprite));
     }
   }
 
