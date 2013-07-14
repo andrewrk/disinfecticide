@@ -230,17 +230,29 @@ chem.onReady(function () {
   function renderCell(i) {
     var cell = cells[i];
     var index = i * 4;
-    var value = 255 - (cell.populationHealthyAlive / MAX_POPULATION)*255;
+    var density = 255 - (cell.density() * 255);
+    var blendConstant = 0.5;
 
-    if (cell.isInfected()) {
-      var blendConstant = 0.5;
-      imageData.data[index + 0] = Math.floor(value*blendConstant + 255*(1-blendConstant));
-      imageData.data[index + 1] = Math.floor(value*blendConstant);
-      imageData.data[index + 2] = Math.floor(value*blendConstant);
+    if (cell.populationInfectedAlive > 0) {
+      imageData.data[index + 0] = Math.floor(density*blendConstant + 225*(1-blendConstant));
+      imageData.data[index + 1] = Math.floor(density*blendConstant +  62*(1-blendConstant));
+      imageData.data[index + 2] = Math.floor(density*blendConstant +  58*(1-blendConstant));
+    } else if (cell.populationInfectedDead > 0) {
+      imageData.data[index + 0] = Math.floor(density*blendConstant +   0*(1-blendConstant));
+      imageData.data[index + 1] = Math.floor(density*blendConstant + 136*(1-blendConstant));
+      imageData.data[index + 2] = Math.floor(density*blendConstant +  23*(1-blendConstant));
+    } else if (cell.populationHealthyAlive > 0) {
+      imageData.data[index + 0] = Math.floor(density*blendConstant + 255*(1-blendConstant));
+      imageData.data[index + 1] = Math.floor(density*blendConstant + 131*(1-blendConstant));
+      imageData.data[index + 2] = Math.floor(density*blendConstant + 233*(1-blendConstant));
+    } else if (cell.populationHealthyDead > 0) {
+      imageData.data[index + 0] = Math.floor(density*blendConstant +  88*(1-blendConstant));
+      imageData.data[index + 1] = Math.floor(density*blendConstant +  88*(1-blendConstant));
+      imageData.data[index + 2] = Math.floor(density*blendConstant +  88*(1-blendConstant));
     } else {
-      imageData.data[index + 0] = value; // red
-      imageData.data[index + 1] = value; // green
-      imageData.data[index + 2] = value; // blue
+      imageData.data[index + 0] = density; // red
+      imageData.data[index + 1] = density; // green
+      imageData.data[index + 2] = density; // blue
     }
     imageData.data[index + 3] = 255;   // alpha
   }
@@ -300,7 +312,8 @@ chem.onReady(function () {
     pie[0].stat = 0;
     pie[1].stat = 0;
     pie[2].stat = 0;
-    for (var i = 0; i < cells.length; ++i) {
+    var i;
+    for (i = 0; i < cells.length; ++i) {
       var y = Math.floor(i/worldSize.x);
       var x = i%worldSize.x;
 
@@ -386,6 +399,15 @@ Cell.prototype.computeUpdate = function() {
   return false;
 }
 
+Cell.prototype.density = function() {
+  return this.totalPopulation() / MAX_POPULATION;
+};
+
+Cell.prototype.totalPopulation = function() {
+  return this.populationHealthyAlive + this.populationInfectedAlive +
+    this.populationHealthyDead + this.populationInfectedDead;
+};
+
 Cell.prototype.addHealthyPopulation = function(population) {
   this.populationHealthyAlive += population;
   if (this.populationHealthyAlive > MAX_POPULATION) this.populationHealthyAlive = MAX_POPULATION;
@@ -396,8 +418,7 @@ Cell.prototype.canInfect = function() {
 }
 
 Cell.prototype.isInfected = function() {
-  if (this.populationInfectedAlive > 0) return true;
-  else return false;
+  return this.populationInfectedAlive > 0;
 }
 
 Cell.prototype.infect = function() {
