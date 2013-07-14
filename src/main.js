@@ -6,10 +6,16 @@ var STREAMER_SPEED = 0.20;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var MAX_CELL_POPULATION = 10000;
 var PLAGUE_KILL_RATE = 0.005;
-var PLAGUE_KILL_CONSTANT = 0;
+var PLAGUE_KILL_CONSTANT = 0.01;
 var STREAMER_SCHEDULE_PROBABILITY = 0.00025;
 var MAX_CONCURRENT_STREAMERS = 10;
 var INFECT_CONSTANT = 0.000004;
+
+var GUN_RADIUS = 6;
+var GUN_INFECT_KILL_RATE = 0.20;
+var GUN_INFECT_KILL_CONSTANT = 20;
+var GUN_HEALTHY_KILL_RATE = 0.04;
+var GUN_HEALTHY_KILL_CONSTANT = 4;
 
 var populationCenters = [];
 
@@ -20,7 +26,7 @@ var uiWeapons = [
   {
     name: "gun",
     crosshair: "crosshair",
-    radius: 6,
+    radius: GUN_RADIUS,
   },
   {
     name: "bomb",
@@ -41,6 +47,7 @@ var uiWeapons = [
     crosshair: null,
   },
 ];
+var selectedWeapon = null;
 
 var stepCounter = 0;
 var stepThreshold = 10;
@@ -50,7 +57,12 @@ var colorHealthyAlive  = new Color("#ff83e9");
 var colorInfectedAlive = new Color("#e13e3a");
 var colorInfectedDead  = new Color("#008817");
 var colorHealthyDead   = new Color("#585858");
+var colorCasualties    = new Color("#ECBD1C");
 
+var PIE_STAT_HEALTHY = 0;
+var PIE_STAT_INFECTED = 1;
+var PIE_STAT_DEAD = 2;
+var PIE_STAT_CASUALTIES = 3;
 var pie = [
   {
     name: "Healthy",
@@ -67,6 +79,11 @@ var pie = [
     color: colorHealthyDead.toString(),
     stat: 0,
   },
+  {
+    name: "Casualties",
+    color: colorCasualties.toString(),
+    stat: 0,
+  },
 ];
 
 chem.onReady(function () {
@@ -75,6 +92,10 @@ chem.onReady(function () {
   var batch = new chem.Batch();
   var streamers = [];
   var selectionSprite = new chem.Sprite('selection', {batch: batch, zOrder: 1});
+
+  var screamingSound = new chem.Sound('sfx/screaming.ogg');
+  var gunSound = new chem.Sound('sfx/gun.ogg');
+  var explosionSound = new chem.Sound('sfx/boom.ogg');
 
   var imageData = engine.context.getImageData(worldPos.x, worldPos.x, worldSize.x, worldSize.y);
   var cells = initializeCells();
@@ -92,31 +113,10 @@ chem.onReady(function () {
     }
   });
   engine.on('update', function (dt, dx) {
-    if (engine.buttonState(chem.button.MouseLeft)) {
-      rasterCircle(engine.mousePos.x - worldPos.x, engine.mousePos.y - worldPos.y, 30, function(x, y) {
-        if (inBounds(new Vec2d(x, y))) {
-          var cell = cellAt(x, y);
-          cell.addHealthyPopulation( dx*0.1*MAX_CELL_POPULATION );
-          renderCell(cellIndex(x, y));
-        }
-      });
-    }
-    if (engine.buttonJustPressed(chem.button.MouseRight)) {
-      var relPos = engine.mousePos.minus(worldPos);
-      if (inBounds(relPos)) {
-        var sprite = new chem.Sprite("car", { batch: batch });
-        streamers.push(new Streamer(relPos, relPos.offset(20, 20), sprite));
-      }
-    }
     if (engine.buttonJustPressed(chem.button.MouseLeft)) {
-      for (var i = 0; i < uiWeapons.length; ++i) {
-        var uiWeapon = uiWeapons[i];
-        if (uiWeapon.sprite.hitTest(engine.mousePos)) {
-          selectWeapon(uiWeapon);
-          break;
-        }
-      }
+      handleMouseLeft();
     }
+
     streamers.forEach(function(streamer) {
       if (streamer.deleted) return;
       streamer.pos.add(streamer.dir.scaled(STREAMER_SPEED));
@@ -174,6 +174,45 @@ chem.onReady(function () {
   });
   engine.start();
   canvas.focus();
+
+  function handleMouseLeft() {
+    // selecting a weapon
+    for (var i = 0; i < uiWeapons.length; ++i) {
+      var uiWeapon = uiWeapons[i];
+      if (uiWeapon.sprite.hitTest(engine.mousePos)) {
+        selectWeapon(uiWeapon);
+        return;
+      }
+    }
+    if (selectedWeapon === 'gun') {
+      shootGun();
+    }
+  }
+
+  function shootGun() {
+    var targetPos = engine.mousePos.minus(worldPos);
+
+    rasterCircle(targetPos.x, targetPos.y, GUN_RADIUS, function(x, y) {
+      var cell = cellAt(x, y);
+
+      var infectedKillAmt = Math.min(cell.populationInfectedAlive,
+        cell.populationInfectedAlive * GUN_INFECT_KILL_RATE + GUN_INFECT_KILL_CONSTANT);
+      cell.populationInfectedAlive -= infectedKillAmt;
+      cell.populationHealthyDead += infectedKillAmt;
+      pie[PIE_STAT_CASUALTIES].stat += infectedKillAmt;
+
+      var healthyKillAmt = Math.min(cell.populationHealthyAlive,
+        cell.populationHealthyAlive * GUN_HEALTHY_KILL_RATE + GUN_HEALTHY_KILL_CONSTANT);
+      cell.populationHealthyAlive -= healthyKillAmt;
+      cell.populationHealthyDead += healthyKillAmt;
+      pie[PIE_STAT_CASUALTIES].stat += healthyKillAmt;
+
+      renderCell(cellIndex(x, y));
+    });
+
+    gunSound.play();
+    screamingSound.play();
+  }
 
   function cullDeletedStreamers() {
     for (var i = 0; i < streamers.length; ++i) {
@@ -420,6 +459,7 @@ chem.onReady(function () {
       uiWeapon.selected = false;
     });
     target.selected = true;
+    selectedWeapon = target.name;
     selectionSprite.pos = target.sprite.pos;
     selectionSprite.setFrameIndex(0);
     if (currentCrosshair != null) {
@@ -440,7 +480,7 @@ chem.onReady(function () {
         if (cells[i].computeUpdate()) renderCell(i);
 
         // Streamer logic
-        if (cells[i].populationInfectedDead > 0.2 * cells[i].totalPopulation() &&
+        if ((cells[i].populationInfectedDead + cells[i].populationHealthyDead) > 0.2 * cells[i].totalPopulation() &&
             Math.random() < STREAMER_SCHEDULE_PROBABILITY &&
             streamers.length < MAX_CONCURRENT_STREAMERS)
         {
@@ -465,17 +505,17 @@ chem.onReady(function () {
   }
 
   function computePlagueSpread() {
-    pie[0].stat = 0;
-    pie[1].stat = 0;
-    pie[2].stat = 0;
+    pie[PIE_STAT_HEALTHY].stat = 0;
+    pie[PIE_STAT_INFECTED].stat = 0;
+    pie[PIE_STAT_DEAD].stat = -pie[PIE_STAT_CASUALTIES].stat;
 
     var i = 0;
     for (var y = 0; y < worldSize.y; ++y) {
       for (var x = 0; x < worldSize.x; ++x, ++i) {
         var cell = cells[i];
-        pie[0].stat += cell.populationHealthyAlive;
-        pie[1].stat += cell.populationInfectedAlive;
-        pie[2].stat += cell.populationHealthyDead + cell.populationInfectedDead;
+        pie[PIE_STAT_HEALTHY].stat += cell.populationHealthyAlive;
+        pie[PIE_STAT_INFECTED].stat += cell.populationInfectedAlive;
+        pie[PIE_STAT_DEAD].stat += cell.populationHealthyDead + cell.populationInfectedDead;
 
         if (!cell.isInfected()) continue;
 
@@ -520,7 +560,7 @@ Cell.prototype.computeUpdate = function() {
   // DIE FATAL LETHAL!!!
   var amountToKill = Math.min(PLAGUE_KILL_CONSTANT + PLAGUE_KILL_RATE * this.populationInfectedAlive, this.populationInfectedAlive);
   this.populationInfectedAlive -= amountToKill;
-  this.populationInfectedDead += amountToKill;
+  this.populationHealthyDead += amountToKill;
 
   // return true if redraw needed
   return amountToKill > 0;
