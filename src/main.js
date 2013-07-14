@@ -1,5 +1,4 @@
 var chem = require("chem");
-var Vec2d = chem.vec2d;
 var perlin = require('./perlin');
 var Color = require('./color');
 var STREAMER_SPEED = 0.20;
@@ -95,7 +94,7 @@ chem.onReady(function () {
         if (inBounds(chem.vec2d(x, y))) {
           var cell = cellAt(x, y);
           cell.addHealthyPopulation( dx*0.1*MAX_CELL_POPULATION );
-          renderCell(y * worldSize.x + x);
+          renderCell(cellIndex(x, y));
         }
       });
     }
@@ -308,7 +307,7 @@ chem.onReady(function () {
     for (i = 0; i < startInfectCount; ++i) {
       var x = Math.floor(chunkHeight*Math.random() + i * chunkHeight);
       var y = Math.floor(worldSize.x*Math.random());
-      var searchIdx = x * worldSize.x + y;
+      var searchIdx = cellIndex(x, y);
       while (!cells[searchIdx].canInfect() || cells[searchIdx].density() < 0.90) {
         searchIdx = (searchIdx + 1) % cells.length;
       }
@@ -354,7 +353,11 @@ chem.onReady(function () {
   }
 
   function cellAt(x, y) {
-    return cells[y * worldSize.x + x];
+    return cells[cellIndex(x, y)];
+  }
+
+  function cellIndex(x, y) {
+    return y * worldSize.x + x;
   }
 
   function inBounds(v) {
@@ -398,23 +401,28 @@ chem.onReady(function () {
   }
 
   function updateCells() {
-    for (var i = 0; i < cells.length; ++i) {
-      cells[i].justInfected = false;
-      if (cells[i].computeUpdate()) renderCell(i);
+    var i = 0;
+    for (var y = 0; y < worldSize.y; ++y) {
+      for (var x = 0; x < worldSize.x; ++x) {
+        cells[i].justInfected = false;
+        if (cells[i].computeUpdate()) renderCell(i);
 
-      // Streamer logic
-      if (cells[i].populationInfectedDead > 0.2 * cells[i].totalPopulation() &&
-          Math.random() < STREAMER_SCHEDULE_PROBABILITY &&
-          streamers.length < MAX_CONCURRENT_STREAMERS)
-      {
-        var sprite = new chem.Sprite("car", { batch: batch });
+        // Streamer logic
+        if (cells[i].populationInfectedDead > 0.2 * cells[i].totalPopulation() &&
+            Math.random() < STREAMER_SCHEDULE_PROBABILITY &&
+            streamers.length < MAX_CONCURRENT_STREAMERS)
+        {
+          var sprite = new chem.Sprite("car", { batch: batch });
 
-        var populationCenterIdx = Math.floor( Math.random() * populationCenters.length );
-        var destIdx = populationCenters[populationCenterIdx]
+          var populationCenterIdx = Math.floor( Math.random() * populationCenters.length );
+          var destIdx = populationCenters[populationCenterIdx]
 
-        var destLoc = new Vec2d(destIdx%worldSize.x, Math.floor(destIdx/worldSize.x));
-        var srcLoc = new Vec2d(i%worldSize.x, Math.floor(i/worldSize.x));
-        streamers.push(new Streamer(srcLoc, destLoc, sprite));
+          var destLoc = chem.vec2d(destIdx%worldSize.x, Math.floor(destIdx/worldSize.x));
+          var srcLoc = chem.vec2d(x, y);
+          streamers.push(new Streamer(srcLoc, destLoc, sprite));
+        }
+
+        i += 1;
       }
     }
   }
@@ -423,67 +431,30 @@ chem.onReady(function () {
     pie[0].stat = 0;
     pie[1].stat = 0;
     pie[2].stat = 0;
-    var i;
-    for (i = 0; i < cells.length; ++i) {
-      var y = Math.floor(i/worldSize.x);
-      var x = i%worldSize.x;
 
-      pie[0].stat += cells[i].populationHealthyAlive;
-      pie[1].stat += cells[i].populationInfectedAlive;
-      pie[2].stat += cells[i].populationHealthyDead + cells[i].populationInfectedDead;
+    var i = 0;
+    for (var y = 0; y < worldSize.y; ++y) {
+      for (var x = 0; x < worldSize.x; ++x, ++i) {
+        pie[0].stat += cells[i].populationHealthyAlive;
+        pie[1].stat += cells[i].populationInfectedAlive;
+        pie[2].stat += cells[i].populationHealthyDead + cells[i].populationInfectedDead;
 
-      if (!cells[i].isInfected()) continue;
+        if (!cells[i].isInfected()) continue;
 
-      // so that we don't double count infections 
-      if (cells[i].justInfected) continue;
+        // so that we don't double count infections
+        if (cells[i].justInfected) continue;
 
-      // add as a potential source of streamer
-
-
-      // four neighbors
-      if (y > 0 && cellAt(x,y-1).canInfect()) {
-        cellAt(x,y-1).infect();
-        renderCell(i-worldSize.x);
-      }
-
-      if (y < (worldSize.y-1) && cellAt(x,y+1).canInfect()) {
-        cellAt(x,y+1).infect();
-        renderCell(i+worldSize.x);
-      }
-
-      if (x > 0 && cellAt(x-1,y).canInfect()) {
-        cellAt(x-1,y).infect();
-        renderCell(i-1);
-      }
-
-      if (x < (worldSize.x-1) && cellAt(x+1,y).canInfect()) {
-        cellAt(x+1,y).infect();
-        renderCell(i+1);
-      }
-
-      // rest of the "nine" neighbors
-      // bottom right
-      if (x < (worldSize.x-1) && y < (worldSize.y-1) && cellAt(x+1,y+1).canInfect()) {
-        cellAt(x+1,y+1).infect();
-        renderCell(i+worldSize.x+1);
-      }
-
-      // bottom left
-      if (x > 0 && y < (worldSize.y-1) && cellAt(x-1,y+1).canInfect()) {
-        cellAt(x-1,y+1).infect();
-        renderCell(i+worldSize.x-1);
-      }
-
-      // top left
-      if (x > 0 && y > 0 && cellAt(x-1,y-1).canInfect()) {
-        cellAt(x-1,y-1).infect();
-        renderCell(i-worldSize.x-1);
-      }
-
-      // top right
-      if (x < (worldSize.x-1) && y > 0 && cellAt(x+1,y-1).canInfect()) {
-        cellAt(x+1,y-1).infect();
-        renderCell(i-worldSize.x+1);
+        // infect neighbors
+        for (var dy = -1; dy <= 1; ++dy) {
+          for (var dx = -1; dx <= 1; ++dx) {
+            if (dx === 0 && dy === 0) continue;
+            if (!inBounds(chem.vec2d(x+dx, y+dy))) continue;
+            var neighbor = cellAt(x+dx, y+dy);
+            if (!neighbor.canInfect()) continue;
+            neighbor.infect();
+            renderCell(cellIndex(x+dx, y+dy));
+          }
+        }
       }
     }
   }
