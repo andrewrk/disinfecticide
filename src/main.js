@@ -167,7 +167,7 @@ chem.onReady(function () {
 
     drawStatsPieChart(context, pieLoc.x, pieLoc.y, pieRadius);
 
-    var spotInfoSize = new Vec2d(pieRadius * 2, 70);
+    var spotInfoSize = new Vec2d(pieRadius * 2, 90);
     var spotInfoLoc = pieLoc.offset(-pieRadius, -pieRadius - pieMargin - spotInfoSize.y);
     drawSpotInfo(context, spotInfoLoc, spotInfoSize);
 
@@ -470,14 +470,21 @@ chem.onReady(function () {
   }
 
   function setUpUi() {
-    var pos = new Vec2d(10, 10);
+    var margin = 10;
+    var pos = new Vec2d(margin, margin);
+    var right = worldPos.x - 2 * margin;
     for (var i = 0; i < uiWeapons.length; ++i) {
       var uiWeapon = uiWeapons[i];
       uiWeapon.sprite = new chem.Sprite(uiWeapon.name, {
         batch: batch,
         pos: pos.clone(),
       });
-      pos.y += uiWeapon.sprite.size.y;
+      pos.x += uiWeapon.sprite.size.x;
+
+      if (pos.x + uiWeapon.sprite.size.x >= right) {
+        pos.x = margin;
+        pos.y += uiWeapon.sprite.size.y;
+      }
 
       if (uiWeapon.crosshair) {
         uiWeapon.crosshairSprite = new chem.Sprite(uiWeapon.crosshair, {
