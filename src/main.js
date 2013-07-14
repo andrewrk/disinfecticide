@@ -5,6 +5,7 @@ var Color = require('./color');
 var commaIt = require('comma-it').commaIt;
 var STREAMER_SPEED = 0.20;
 var STREAMER_ARRIVE_THRESHOLD = 1;
+var STREAMER_RADIUS = 12;
 var MAX_CELL_POPULATION = 10000;
 var PLAGUE_KILL_RATE = 0.005;
 var PLAGUE_KILL_CONSTANT = 0.01;
@@ -137,8 +138,8 @@ chem.onReady(function () {
           renderCell(destCell.index);
         }
 
+        streamer.deleted = true;
         streamer.sprite.on('animationend', function() {
-          streamer.deleted = true;
           streamer.sprite.delete();
         });
       }
@@ -213,6 +214,22 @@ chem.onReady(function () {
       casualties += healthyKillAmt;
 
       renderCell(cellIndex(x, y));
+    });
+
+    // check if we killed any streamers
+    var streamerKillCount = 0;
+    streamers.forEach(function(streamer) {
+      if (streamer.deleted) return;
+      if (targetPos.distance(streamer.pos) < STREAMER_RADIUS) {
+        streamerKillCount += 1;
+        streamer.deleted = true;
+        streamer.sprite.setAnimationName('explosion');
+        streamer.sprite.setFrameIndex(0);
+        streamer.sprite.on('animationend', function() {
+          streamer.sprite.delete();
+        });
+      }
+      pie[PIE_STAT_CASUALTIES].stat += 4; // TODO streamer.population;
     });
 
     gunSound.play();
