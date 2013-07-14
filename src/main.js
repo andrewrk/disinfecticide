@@ -102,8 +102,7 @@ chem.onReady(function () {
       var relPos = engine.mousePos.minus(worldPos);
       if (inBounds(relPos)) {
         var sprite = new chem.Sprite("car", { batch: batch });
-        var xSprite = new chem.Sprite("x", { batch: batch });
-        streamers.push(new Streamer(relPos, relPos.offset(200, 200), sprite, xSprite));
+        streamers.push(new Streamer(relPos, relPos.offset(200, 200), sprite));
       }
     }
     if (engine.buttonJustPressed(chem.button.MouseLeft)) {
@@ -120,10 +119,9 @@ chem.onReady(function () {
       streamer.pos.add(streamer.dir.scaled(STREAMER_SPEED));
       streamer.sprite.pos = streamer.pos.plus(worldPos);
       if (streamer.pos.distance(streamer.dest) < STREAMER_ARRIVE_THRESHOLD) {
-        streamer.xSprite.delete();
         streamer.sprite.setAnimationName('explosion');
         streamer.sprite.setFrameIndex(0);
-        
+
         //streamer.dest.x, streamer.dest.y
         var destCell = cellAt(streamer.dest.x, streamer.dest.y);
         if (destCell.canInfect()) {
@@ -154,18 +152,6 @@ chem.onReady(function () {
     context.fillRect(0, 0, worldPos.x, engine.size.y);
 
     context.putImageData(imageData, worldPos.x, worldPos.y);
-
-    // draw lines from streamers to their destinations
-    context.strokeStyle = "#ff0000";
-    streamers.forEach(function(streamer) {
-      if (streamer.deleted) return;
-      context.beginPath()
-      context.moveTo(streamer.sprite.pos.x, streamer.sprite.pos.y);
-      context.lineTo(streamer.xSprite.pos.x, streamer.xSprite.pos.y);
-      context.closePath()
-      context.lineWidth = 1;
-      context.stroke();
-    });
 
     // draw sprites
     engine.draw(batch);
@@ -410,7 +396,6 @@ chem.onReady(function () {
           Math.random() < STREAMER_SCHEDULE_PROBABILITY)
       {
         var sprite = new chem.Sprite("car", { batch: batch });
-        var xSprite = new chem.Sprite("x", { batch: batch });
 
         var populationCenterIdx = Math.floor( Math.random() * populationCenters.length );
         var destIdx = populationCenters[populationCenterIdx]
@@ -419,7 +404,7 @@ chem.onReady(function () {
         // var x = i%worldSize.x;
         var destLoc = new Vec2d(destIdx%worldSize.x, Math.floor(destIdx/worldSize.x));
         var srcLoc = new Vec2d(i%worldSize.x, Math.floor(i/worldSize.x));
-        streamers.push(new Streamer(srcLoc, destLoc, sprite, xSprite));
+        streamers.push(new Streamer(srcLoc, destLoc, sprite));
     }
 
 
@@ -583,7 +568,7 @@ function rasterCircle(x0, y0, radius, cb) {
   }
 }
 
-function Streamer(pos, dest, sprite, xSprite) {
+function Streamer(pos, dest, sprite) {
   this.pos = pos;
   this.dest = dest;
   this.dir = this.dest.minus(this.pos).normalize();
@@ -591,7 +576,4 @@ function Streamer(pos, dest, sprite, xSprite) {
   this.sprite.pos = pos.plus(worldPos);
   this.sprite.rotation = this.dir.angle();
   this.deleted = false;
-  this.xSprite = xSprite;
-  this.xSprite.pos = dest.plus(worldPos);
-  this.xSprite.rotation = this.dir.angle();
 }
