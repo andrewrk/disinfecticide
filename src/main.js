@@ -34,12 +34,6 @@ var uiWeapons = [
   },
 ];
 
-var Plague = {
-  KillRate: 10,
-  SpreadRate: 0,
-  StreamRate: 0,
-}
-
 var timeCounter = 0;
 var timeThresh  = 0.001;
 
@@ -271,12 +265,6 @@ chem.onReady(function () {
     }
   }
 });
-
-function Plague() {
-  this.KillRate = 10;
-  this.SpreadRate = 0;
-  this.StreamRate = 0;
-}
 
 function Cell() {
   this.population = 0;
