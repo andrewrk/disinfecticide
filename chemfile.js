@@ -39,5 +39,6 @@ exports.spritesheet = {
     },
     crosshair: {},
     'bomb-crosshair': {},
+    'ch-disinfecticide': {},
   }
 };

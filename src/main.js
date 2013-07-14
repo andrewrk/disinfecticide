@@ -24,7 +24,8 @@ var uiWeapons = [
   },
   {
     name: "disinfecticide",
-    crosshair: null,
+    crosshair: 'ch-disinfecticide',
+    radius: 30,
   },
   {
     name: "curebomb",
