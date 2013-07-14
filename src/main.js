@@ -6,7 +6,7 @@ var commaIt = require('comma-it').commaIt;
 var STREAMER_SPEED = 0.20;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var STREAMER_RADIUS = 12;
-var STREAMER_MAX_PEOPLE = 100;
+var STREAMER_MAX_PEOPLE = 1000;
 var MAX_CELL_POPULATION = 10000;
 var PLAGUE_KILL_RATE = 0.0025;
 var PLAGUE_KILL_CONSTANT = 0.005;
@@ -135,7 +135,8 @@ chem.onReady(function () {
         //streamer.dest.x, streamer.dest.y
         var destCell = cellAt(streamer.dest.x, streamer.dest.y);
         if (destCell.canInfect()) {
-          destCell.infect(1);
+          destCell.addInfected(streamer.populationInfectedAlive);
+          destCell.populationHealthyAlive += streamer.populationHealthyAlive;
           renderCell(destCell.index);
         }
 
@@ -248,8 +249,12 @@ chem.onReady(function () {
         streamer.sprite.on('animationend', function() {
           streamer.sprite.delete();
         });
+
+        var streamerCell = cellAt(Math.floor(streamer.pos.x), Math.floor(streamer.pos.y));
+        streamerCell.populationHealthyDead += (streamer.populationHealthyAlive + streamer.populationInfectedAlive);
+        renderCell(streamerCell.index);
       }
-      pie[PIE_STAT_CASUALTIES].stat += 4; // TODO streamer.population;
+      pie[PIE_STAT_CASUALTIES].stat += streamer.populationHealthyAlive;
     });
 
     gunSound.play();
@@ -559,6 +564,8 @@ chem.onReady(function () {
           var numInfected = Math.min( cells[i].populationInfectedAlive, STREAMER_MAX_PEOPLE );
           cells[i].populationInfectedAlive -= numInfected;
 
+          renderCell(i);
+
           var destLoc = new Vec2d(destIdx%worldSize.x, Math.floor(destIdx/worldSize.x));
           var srcLoc = new Vec2d(x, y);
           streamers.push(new Streamer(srcLoc, destLoc, sprite, 0, numInfected));
@@ -671,6 +678,11 @@ Cell.prototype.canInfect = function() {
 
 Cell.prototype.isInfected = function() {
   return this.populationInfectedAlive > 0;
+}
+
+Cell.prototype.addInfected = function(amount) {
+  this.populationInfectedAlive += amount;
+  this.justInfected = true;
 }
 
 Cell.prototype.infect = function(amount) {
