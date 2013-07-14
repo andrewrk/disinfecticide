@@ -23,6 +23,14 @@ exports.spritesheet = {
       frames: "bomb.png",
       anchor: "topleft",
     },
+    'drop-bomb': {
+      loop: false,
+    },
+    'hbombexplode': {
+      anchor: 'bottom',
+      loop: false,
+      delay: 0.1,
+    },
     wall: {
       anchor: "topleft",
     },

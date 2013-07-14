@@ -189,7 +189,25 @@ chem.onReady(function () {
     }
     if (selectedWeapon === 'gun') {
       shootGun();
+    } else if (selectedWeapon === 'bomb') {
+      shootBomb();
     }
+  }
+
+  function shootBomb() {
+    var targetPos = engine.mousePos.minus(worldPos);
+
+    var sprite = new chem.Sprite('drop-bomb', {
+      batch: batch,
+      pos: engine.mousePos.clone(),
+    });
+    sprite.once('animationend', function() {
+      sprite.setAnimationName('hbombexplode');
+      sprite.setFrameIndex(0);
+      sprite.once('animationend', function() {
+        sprite.delete();
+      });
+    });
   }
 
   function shootGun() {
