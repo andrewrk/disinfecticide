@@ -4,7 +4,7 @@ var perlin = require('./perlin');
 var STREAMER_SPEED = 0.001;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var MAX_CELL_POPULATION = 10000;
-var PLAGUE_KILL_RATE = 100;
+var PLAGUE_KILL_RATE = 5;
 
 var worldSize = chem.vec2d(480, 480);
 var worldPos = chem.vec2d(240, 0);
@@ -36,7 +36,7 @@ var uiWeapons = [
 ];
 
 var stepCounter = 0;
-var stepThreshold = 5;
+var stepThreshold = 20;
 
 var pie = [
   {
@@ -211,13 +211,20 @@ chem.onReady(function () {
       }
     }
 
-    // infect a pixel near the center to start us off
-    var searchIdx = Math.floor(worldSize.y/2) * worldSize.x + Math.floor(worldSize.x/2);
-    while (searchIdx < cells.length && !cells[searchIdx].canInfect()) {
-      searchIdx++;
-      continue;
+    // infect some pixels to start with
+    var startInfectCount = 2;
+    // break the world into startInfectCount chunks and put a random
+    // infection in every chunk
+    var chunkHeight = worldSize.y / startInfectCount;
+    for (i = 0; i < startInfectCount; ++i) {
+      var x = Math.floor(chunkHeight*Math.random() + i * chunkHeight);
+      var y = Math.floor(worldSize.x*Math.random());
+      var searchIdx = x * worldSize.x + y;
+      while (!cells[searchIdx].canInfect() || cells[searchIdx].density() < 0.90) {
+        searchIdx = (searchIdx + 1) % cells.length;
+      }
+      cells[searchIdx].infect();
     }
-    cells[searchIdx].infect();
 
     return cells;
   }
