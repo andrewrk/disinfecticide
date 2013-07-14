@@ -34,8 +34,26 @@ var uiWeapons = [
   },
 ];
 
-var timeCounter = 0;
-var timeThresh  = 0.001;
+var stepCounter = 0;
+var stepThreshold = 5;
+
+var pie = [
+  {
+    name: "Healthy",
+    color: "#FF83E9",
+    stat: 0,
+  },
+  {
+    name: "Infected",
+    color: "#E13E3A",
+    stat: 0,
+  },
+  {
+    name: "Dead",
+    color: "#585858",
+    stat: 0,
+  },
+];
 
 chem.onReady(function () {
   var canvas = document.getElementById("game");
@@ -43,6 +61,7 @@ chem.onReady(function () {
   var batch = new chem.Batch();
   var streamers = [];
   var selectionSprite = new chem.Sprite('selection', {batch: batch, zOrder: 1});
+
 
   var imageData = engine.context.getImageData(worldPos.x, worldPos.x, worldSize.x, worldSize.y);
   var cells = initializeCells();
@@ -100,10 +119,10 @@ chem.onReady(function () {
       }
     });
 
-    timeCounter += dt;
-    if (timeCounter > timeThresh) {
+    stepCounter += 1;
+    if (stepCounter > stepThreshold) {
       computePlagueSpread();
-      timeCounter = 0;
+      stepCounter -= stepThreshold;
     }
 
   });
@@ -122,11 +141,16 @@ chem.onReady(function () {
       context.moveTo(streamer.sprite.pos.x, streamer.sprite.pos.y);
       context.lineTo(streamer.xSprite.pos.x, streamer.xSprite.pos.y);
       context.closePath()
+      context.lineWidth = 1;
       context.stroke();
     });
 
     // draw sprites
     engine.draw(batch);
+
+    var pieRadius = 100;
+    var pieMargin = 10;
+    drawStatsPieChart(context, pieMargin + pieRadius, engine.size.y - pieRadius - pieMargin, pieRadius);
 
     // draw a little fps counter in the corner
     context.fillStyle = '#000000'
@@ -134,6 +158,40 @@ chem.onReady(function () {
   });
   engine.start();
   canvas.focus();
+
+  function drawStatsPieChart(context, x, y, radius) {
+    var total = 0;
+    var i;
+    for (i = 0; i < pie.length; ++i) {
+      total += pie[i].stat;
+    }
+    var r = 0;
+    for (i = 0; i < pie.length; ++i) {
+      var amt = pie[i].stat / total;
+      var newR = r + amt * Math.PI * 2;
+      context.beginPath();
+      context.moveTo(x, y);
+      context.lineTo(x + Math.cos(r) * radius, y + Math.sin(r) * radius);
+      context.arc(x, y, radius, r, newR);
+      context.lineTo(x, y);
+      context.closePath();
+      context.fillStyle = pie[i].color;
+      context.fill();
+      context.strokeStyle = "#000000";
+      context.lineWidth = 1;
+      context.stroke();
+      r = newR;
+    }
+
+
+    // outline
+    context.beginPath();
+    context.arc(x, y, radius, 0, 2 * Math.PI, false);
+    context.closePath();
+    context.strokeStyle = "#000000";
+    context.lineWidth = 2;
+    context.stroke();
+  }
 
   function initializeCells() {
     var noise = perlin.generatePerlinNoise(worldSize.x, worldSize.y, {
@@ -147,7 +205,7 @@ chem.onReady(function () {
       var n = noise[i];
       if (n > 0.70) {
         cells[i].addHealthyPopulation( ((n-0.7)/0.3)*MAX_POPULATION );
-      } 
+      }
     }
 
     // infect a pixel near the center to start us off
@@ -229,10 +287,16 @@ chem.onReady(function () {
   }
 
   function computePlagueSpread() {
-
+    pie[0].stat = 0;
+    pie[1].stat = 0;
+    pie[2].stat = 0;
     for (var i = 0; i < cells.length; ++i) {
       var y = Math.floor(i/worldSize.x);
       var x = i%worldSize.x;
+
+      pie[0].stat += cells[i].populationHealthyAlive;
+      pie[1].stat += cells[i].populationInfectedAlive;
+      pie[2].stat += cells[i].populationHealthyDead + cells[i].populationInfectedDead;
 
       if (!cells[i].isInfected()) continue;
 
@@ -294,8 +358,6 @@ chem.onReady(function () {
 });
 
 function Cell() {
-  this.population = 0;
-
   this.populationHealthyAlive = 0;
   this.populationInfectedAlive = 0;
   this.populationHealthyDead = 0;
@@ -324,8 +386,7 @@ Cell.prototype.infect = function() {
 }
 
 Cell.prototype.setPopulation = function(healthy_ppl) {
-  this.population = healthy_ppl;
-  this.populationHealthyAlive = this.population;
+  this.populationHealthyAlive = healthy_ppl;
   this.populationInfectedAlive = 0;
 }
 
