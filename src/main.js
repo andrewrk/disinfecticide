@@ -4,11 +4,11 @@ var Color = require('./color');
 var STREAMER_SPEED = 0.20;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var MAX_CELL_POPULATION = 10000;
-var PLAGUE_KILL_RATE = 0.01;
+var PLAGUE_KILL_RATE = 0.0025;
 var PLAGUE_KILL_CONSTANT = 0;
-var STREAMER_SCHEDULE_PROBABILITY = 0.0005;
+var STREAMER_SCHEDULE_PROBABILITY = 0.000125;
 var MAX_CONCURRENT_STREAMERS = 10;
-var INFECT_CONSTANT = 0.000008;
+var INFECT_CONSTANT = 0.000002;
 
 var populationCenters = [];
 
@@ -42,7 +42,7 @@ var uiWeapons = [
 ];
 
 var stepCounter = 0;
-var stepThreshold = 20;
+var stepThreshold = 5;
 
 var colorUninhabited = new Color("#ffffff");
 var colorHealthyAlive = new Color("#ff83e9");
