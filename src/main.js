@@ -101,6 +101,10 @@ chem.onReady(function () {
   var cells = initializeCells();
 
   var currentCrosshair = null;
+  var pieMargin = 10;
+  var pieRadius = (worldPos.x - pieMargin * 2) / 2;
+  var pieLoc = new Vec2d(pieMargin + pieRadius, engine.size.y - pieRadius - pieMargin);
+
   renderAllCells();
   setUpUi();
   selectWeapon(uiWeapons[0]);
@@ -159,9 +163,6 @@ chem.onReady(function () {
     // draw sprites
     engine.draw(batch);
 
-    var pieMargin = 10;
-    var pieRadius = (worldPos.x - pieMargin * 2) / 2;
-    var pieLoc = new Vec2d(pieMargin + pieRadius, engine.size.y - pieRadius - pieMargin);
     drawStatsPieChart(context, pieLoc.x, pieLoc.y, pieRadius);
 
     var spotInfoSize = new Vec2d(pieRadius * 2, 70);
@@ -227,40 +228,52 @@ chem.onReady(function () {
   }
 
   function drawSpotInfo(context, pos, size) {
-    var relMousePos = engine.mousePos.minus(worldPos);
-    if (! inBounds(relMousePos)) return;
-    var cell = cellAt(relMousePos.x, relMousePos.y);
     var items = [];
-    if (cell.totalPopulation() === 0) {
-      items.push({
-        color: colorUninhabited.toString(),
-        caption: "Uninhabited",
+    if (engine.mousePos.distance(pieLoc) < pieRadius) {
+      pie.forEach(function(pieItem) {
+        if (pieItem.stat >= 1) {
+          items.push({
+            color: pieItem.color,
+            caption: pieItem.name + ": " + Math.floor(pieItem.stat),
+          });
+        }
       });
+    } else {
+      var relMousePos = engine.mousePos.minus(worldPos);
+      if (! inBounds(relMousePos)) return;
+      var cell = cellAt(relMousePos.x, relMousePos.y);
+      if (cell.totalPopulation() === 0) {
+        items.push({
+          color: colorUninhabited.toString(),
+          caption: "Uninhabited",
+        });
+      }
+      if (cell.populationHealthyAlive >= 1) {
+        items.push({
+          color: colorHealthyAlive.toString(),
+          caption: "Healthy: " + Math.floor(cell.populationHealthyAlive),
+        });
+      }
+      if (cell.populationInfectedAlive >= 1) {
+        items.push({
+          color: colorInfectedAlive.toString(),
+          caption: "Infected: " + Math.floor(cell.populationInfectedAlive),
+        });
+      }
+      if (cell.populationHealthyDead >= 1) {
+        items.push({
+          color: colorHealthyDead.toString(),
+          caption: "Dead: " + Math.floor(cell.populationHealthyDead),
+        });
+      }
+      if (cell.populationInfectedDead >= 1) {
+        items.push({
+          color: colorInfectedDead.toString(),
+          caption: "Rotting Corpses: " + Math.floor(cell.populationInfectedDead),
+        });
+      }
     }
-    if (cell.populationHealthyAlive >= 1) {
-      items.push({
-        color: colorHealthyAlive.toString(),
-        caption: "Healthy: " + Math.floor(cell.populationHealthyAlive),
-      });
-    }
-    if (cell.populationInfectedAlive >= 1) {
-      items.push({
-        color: colorInfectedAlive.toString(),
-        caption: "Infected: " + Math.floor(cell.populationInfectedAlive),
-      });
-    }
-    if (cell.populationHealthyDead >= 1) {
-      items.push({
-        color: colorHealthyDead.toString(),
-        caption: "Dead: " + Math.floor(cell.populationHealthyDead),
-      });
-    }
-    if (cell.populationInfectedDead >= 1) {
-      items.push({
-        color: colorInfectedDead.toString(),
-        caption: "Rotting Corpses: " + Math.floor(cell.populationInfectedDead),
-      });
-    }
+    if (items.length === 0) return;
     var margin = 4;
     var boxSize = 16;
     var y = pos.y + margin;
