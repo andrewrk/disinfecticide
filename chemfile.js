@@ -17,6 +17,7 @@ exports.spritesheet = {
     car: {},
     x: {},
     bomb: {
+      frames: "bomb.png",
       anchor: "topleft",
     },
     wall: {
@@ -36,5 +37,7 @@ exports.spritesheet = {
       loop: true,
       delay: 0.1,
     },
+    crosshair: {},
+    'bomb-crosshair': {},
   }
 };

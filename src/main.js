@@ -2,18 +2,34 @@ var chem = require("chem");
 var Vec2d = chem.vec2d;
 var perlin = require('./perlin');
 var STREAMER_SPEED = 0.001;
-var BRUSH_RADIUS = 6;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 
 var worldSize = chem.vec2d(480, 480);
 var worldPos = chem.vec2d(240, 0);
 
 var uiWeapons = [
-  { name: "gun"},
-  { name: "bomb"},
-  { name: "wall"},
-  { name: "disinfecticide"},
-  { name: "curebomb"},
+  {
+    name: "gun",
+    crosshair: "crosshair",
+    radius: 6,
+  },
+  {
+    name: "bomb",
+    crosshair: "bomb-crosshair",
+    radius: 30,
+  },
+  {
+    name: "wall",
+    crosshair: null,
+  },
+  {
+    name: "disinfecticide",
+    crosshair: null,
+  },
+  {
+    name: "curebomb",
+    crosshair: null,
+  },
 ];
 
 chem.onReady(function () {
@@ -25,16 +41,21 @@ chem.onReady(function () {
 
   var imageData = engine.context.getImageData(worldPos.x, worldPos.x, worldSize.x, worldSize.y);
   var cells = initializeCells();
+  var currentCrosshair = null;
   renderAllCells();
   setUpUi();
   selectWeapon(uiWeapons[0]);
   engine.on('mousemove', function() {
-    var showCursor = engine.mousePos.x < worldPos.x;
+    var showCursor = engine.mousePos.x < worldPos.x || currentCrosshair == null;
     canvas.style.cursor = showCursor ? "default" : "none";
+    if (currentCrosshair != null) {
+      currentCrosshair.pos = engine.mousePos;
+      currentCrosshair.setVisible(!showCursor);
+    }
   });
   engine.on('update', function (dt, dx) {
     if (engine.buttonState(chem.button.MouseLeft)) {
-      rasterCircle(engine.mousePos.x - worldPos.x, engine.mousePos.y - worldPos.y, BRUSH_RADIUS, function(x, y) {
+      rasterCircle(engine.mousePos.x - worldPos.x, engine.mousePos.y - worldPos.y, 30, function(x, y) {
         if (inBounds(chem.vec2d(x, y))) {
           var cell = cellAt(x, y);
           cell.population += dx * 0.1;
@@ -95,15 +116,6 @@ chem.onReady(function () {
     // draw sprites
     engine.draw(batch);
 
-    if (engine.mousePos.x > worldPos.x) {
-      // draw circle where mouse is
-      context.strokeStyle = '#000000';
-      context.beginPath();
-      context.arc(engine.mousePos.x, engine.mousePos.y, BRUSH_RADIUS, 0, 2 * Math.PI, false);
-      context.closePath();
-      context.stroke();
-    }
-
     // draw a little fps counter in the corner
     context.fillStyle = '#000000'
     engine.drawFps();
@@ -157,11 +169,20 @@ chem.onReady(function () {
   function setUpUi() {
     var pos = chem.vec2d(10, 10);
     for (var i = 0; i < uiWeapons.length; ++i) {
-      uiWeapons[i].sprite = new chem.Sprite(uiWeapons[i].name, {
+      var uiWeapon = uiWeapons[i];
+      uiWeapon.sprite = new chem.Sprite(uiWeapon.name, {
         batch: batch,
         pos: pos.clone(),
       });
-      pos.y += uiWeapons[i].sprite.size.y;
+      pos.y += uiWeapon.sprite.size.y;
+
+      if (uiWeapon.crosshair) {
+        uiWeapon.crosshairSprite = new chem.Sprite(uiWeapon.crosshair, {
+          batch: batch,
+          zOrder: 1,
+          visible: false,
+        });
+      }
     }
   }
   function selectWeapon(target) {
@@ -171,6 +192,14 @@ chem.onReady(function () {
     target.selected = true;
     selectionSprite.pos = target.sprite.pos;
     selectionSprite.setFrameIndex(0);
+    if (currentCrosshair != null) {
+      currentCrosshair.setVisible(false);
+    }
+    currentCrosshair = target.crosshairSprite;
+    if (currentCrosshair != null) {
+      currentCrosshair.scale.x = (target.radius * 2) / currentCrosshair.size.x;
+      currentCrosshair.scale.y = (target.radius * 2) / currentCrosshair.size.y;
+    }
   }
 });
 
