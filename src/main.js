@@ -76,9 +76,9 @@ chem.onReady(function () {
   var streamers = [];
   var selectionSprite = new chem.Sprite('selection', {batch: batch, zOrder: 1});
 
-
   var imageData = engine.context.getImageData(worldPos.x, worldPos.x, worldSize.x, worldSize.y);
   var cells = initializeCells();
+
   var currentCrosshair = null;
   renderAllCells();
   setUpUi();
@@ -324,6 +324,36 @@ chem.onReady(function () {
     }
   }
 
+  function findHealthyPopulationCenters(nx, ny) {
+    // split into a grid, search maxes in each GridCell
+
+    var gridWidth  = worldSize.x / nx;
+    var gridHeight = worldSize.y / ny;
+    
+    var populationCenters = new Array();
+    for (var i=0; i < nx; i++) {
+      for (var j=0; j < ny; j++) {
+        var maxHealthy = 0;
+        var maxHealthyIdx = -1;
+
+        for (var kx = Math.floor(gridWidth*i); kx < gridWidth*i + gridWidth-1; kx++) {
+          for (var ky = Math.floor(gridHeight*j); ky < gridHeight*j + gridHeight-1; ky++) {
+            c = cellAt(kx,ky);
+            if (c.populationHealthyAlive > maxHealthy && c.populationInfectedAlive <= 0) {
+              maxHealthy = c.populationHealthyAlive;
+              maxHealthyIdx = c.index;
+            }
+          }
+        }
+
+        if (maxHealthyIdx > 0) {
+          populationCenters.push(maxHealthyIdx);
+        }
+      }
+    }
+    return populationCenters;
+  }
+
   function renderCell(i) {
     var cell = cells[i];
     var index = i * 4;
@@ -416,8 +446,13 @@ chem.onReady(function () {
         {
           var sprite = new chem.Sprite("car", { batch: batch });
 
-          var populationCenterIdx = Math.floor( Math.random() * populationCenters.length );
-          var destIdx = populationCenters[populationCenterIdx]
+          healthyCenters = findHealthyPopulationCenters(50,50);
+          if (healthyCenters.length > 0) 
+            var destIdx = healthyCenters[ Math.floor( Math.random() * healthyCenters.length ) ];
+          else { // no more healthy places? go to places that used to be... 
+            var populationCenterIdx = Math.floor( Math.random() * populationCenters.length );
+            var destIdx = populationCenters[populationCenterIdx]
+          }
 
           var destLoc = new Vec2d(destIdx%worldSize.x, Math.floor(destIdx/worldSize.x));
           var srcLoc = new Vec2d(x, y);
