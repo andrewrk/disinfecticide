@@ -2,13 +2,13 @@ var chem = require("chem");
 var Vec2d = chem.vec2d;
 var perlin = require('./perlin');
 var Color = require('./color');
-var STREAMER_SPEED = 0.001;
+var STREAMER_SPEED = 0.20;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var MAX_CELL_POPULATION = 10000;
 var PLAGUE_KILL_RATE = 5;
 var STREAMER_SCHEDULE_PROBABILITY = 0.0005;
 
-var populationCenters = new Array();
+var populationCenters = [];
 
 
 var worldSize = chem.vec2d(480, 480);
@@ -578,7 +578,7 @@ function rasterCircle(x0, y0, radius, cb) {
 function Streamer(pos, dest, sprite, xSprite) {
   this.pos = pos;
   this.dest = dest;
-  this.dir = this.dest.minus(this.pos);
+  this.dir = this.dest.minus(this.pos).normalize();
   this.sprite = sprite;
   this.sprite.pos = pos.plus(worldPos);
   this.sprite.rotation = this.dir.angle();
