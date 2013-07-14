@@ -3,7 +3,7 @@ var Vec2d = chem.vec2d;
 var perlin = require('./perlin');
 var STREAMER_SPEED = 0.001;
 var STREAMER_ARRIVE_THRESHOLD = 1;
-var MAX_POPULATION = 10000;
+var MAX_CELL_POPULATION = 10000;
 var PLAGUE_KILL_RATE = 100;
 
 var worldSize = chem.vec2d(480, 480);
@@ -83,7 +83,7 @@ chem.onReady(function () {
       rasterCircle(engine.mousePos.x - worldPos.x, engine.mousePos.y - worldPos.y, 30, function(x, y) {
         if (inBounds(chem.vec2d(x, y))) {
           var cell = cellAt(x, y);
-          cell.addHealthyPopulation( dx*0.1*MAX_POPULATION );
+          cell.addHealthyPopulation( dx*0.1*MAX_CELL_POPULATION );
           renderCell(y * worldSize.x + x);
         }
       });
@@ -207,7 +207,7 @@ chem.onReady(function () {
       cells[i] = new Cell();
       var n = noise[i];
       if (n > 0.70) {
-        cells[i].addHealthyPopulation( ((n-0.7)/0.3)*MAX_POPULATION );
+        cells[i].addHealthyPopulation( ((n-0.7)/0.3)*MAX_CELL_POPULATION );
       }
     }
 
@@ -387,20 +387,17 @@ function Cell() {
 Cell.prototype.computeUpdate = function() {
   if (!this.isInfected()) return;
 
-  this.populationHealthyAlive -= PLAGUE_KILL_RATE;
-  this.populationInfectedDead += PLAGUE_KILL_RATE;
-  if (this.populationInfectedDead > MAX_POPULATION) this.populationInfectedDead = MAX_POPULATION;
+  // DIE FATAL LETHAL!!!
+  var amountToKill = Math.min(PLAGUE_KILL_RATE, this.populationInfectedAlive);
+  this.populationInfectedAlive -= amountToKill;
+  this.populationInfectedDead += amountToKill;
 
-  if (this.populationHealthyAlive < 0) {
-    this.populationHealthyAlive = 0;
-    return true; // returns true if redraw needed
-  }
-
-  return false;
+  // return true if redraw needed
+  return amountToKill > 0;
 }
 
 Cell.prototype.density = function() {
-  return this.totalPopulation() / MAX_POPULATION;
+  return this.totalPopulation() / MAX_CELL_POPULATION;
 };
 
 Cell.prototype.totalPopulation = function() {
@@ -410,7 +407,9 @@ Cell.prototype.totalPopulation = function() {
 
 Cell.prototype.addHealthyPopulation = function(population) {
   this.populationHealthyAlive += population;
-  if (this.populationHealthyAlive > MAX_POPULATION) this.populationHealthyAlive = MAX_POPULATION;
+  if (this.totalPopulation() > MAX_CELL_POPULATION) {
+    this.populationHealthyAlive -= this.totalPopulation() - MAX_CELL_POPULATION;
+  }
 }
 
 Cell.prototype.canInfect = function() {
