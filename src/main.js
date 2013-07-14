@@ -2,6 +2,7 @@ var chem = require("chem");
 var Vec2d = chem.vec2d.Vec2d;
 var perlin = require('./perlin');
 var Color = require('./color');
+var commaIt = require('comma-it').commaIt;
 var STREAMER_SPEED = 0.20;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var MAX_CELL_POPULATION = 10000;
@@ -234,7 +235,7 @@ chem.onReady(function () {
         if (pieItem.stat >= 1) {
           items.push({
             color: pieItem.color,
-            caption: pieItem.name + ": " + Math.floor(pieItem.stat),
+            caption: pieItem.name + ": " + displayNumber(pieItem.stat),
           });
         }
       });
@@ -251,25 +252,25 @@ chem.onReady(function () {
       if (cell.populationHealthyAlive >= 1) {
         items.push({
           color: colorHealthyAlive.toString(),
-          caption: "Healthy: " + Math.floor(cell.populationHealthyAlive),
+          caption: "Healthy: " + displayNumber(cell.populationHealthyAlive),
         });
       }
       if (cell.populationInfectedAlive >= 1) {
         items.push({
           color: colorInfectedAlive.toString(),
-          caption: "Infected: " + Math.floor(cell.populationInfectedAlive),
+          caption: "Infected: " + displayNumber(cell.populationInfectedAlive),
         });
       }
       if (cell.populationHealthyDead >= 1) {
         items.push({
           color: colorHealthyDead.toString(),
-          caption: "Dead: " + Math.floor(cell.populationHealthyDead),
+          caption: "Dead: " + displayNumber(cell.populationHealthyDead),
         });
       }
       if (cell.populationInfectedDead >= 1) {
         items.push({
           color: colorInfectedDead.toString(),
-          caption: "Rotting Corpses: " + Math.floor(cell.populationInfectedDead),
+          caption: "Rotting Corpses: " + displayNumber(cell.populationInfectedDead),
         });
       }
     }
@@ -656,3 +657,8 @@ function Streamer(pos, dest, sprite) {
   this.sprite.rotation = this.dir.angle();
   this.deleted = false;
 }
+
+function displayNumber(n) {
+  return commaIt(Math.floor(n), {thousandSeperator: ','});
+}
+
