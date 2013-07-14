@@ -148,8 +148,8 @@ chem.onReady(function () {
     // draw sprites
     engine.draw(batch);
 
-    var pieRadius = 100;
     var pieMargin = 10;
+    var pieRadius = (worldPos.x - pieMargin * 2) / 2;
     drawStatsPieChart(context, pieMargin + pieRadius, engine.size.y - pieRadius - pieMargin, pieRadius);
 
     // draw a little fps counter in the corner
