@@ -7,6 +7,7 @@ var STREAMER_ARRIVE_THRESHOLD = 1;
 var MAX_CELL_POPULATION = 10000;
 var PLAGUE_KILL_RATE = 5;
 var STREAMER_SCHEDULE_PROBABILITY = 0.0005;
+var MAX_CONCURRENT_STREAMERS = 10;
 
 var populationCenters = [];
 
@@ -136,6 +137,13 @@ chem.onReady(function () {
         });
       }
     });
+    
+    for (var i=0; i < streamers.length; i++) {
+      if (streamers[i].deleted) {
+        streamers.splice(i, 1);
+      }
+    }
+
 
     stepCounter += 1;
     if (stepCounter > stepThreshold) {
@@ -404,7 +412,9 @@ chem.onReady(function () {
         // var x = i%worldSize.x;
         var destLoc = new Vec2d(destIdx%worldSize.x, Math.floor(destIdx/worldSize.x));
         var srcLoc = new Vec2d(i%worldSize.x, Math.floor(i/worldSize.x));
-        streamers.push(new Streamer(srcLoc, destLoc, sprite));
+        if (streamers.length < MAX_CONCURRENT_STREAMERS)
+          streamers.push(new Streamer(srcLoc, destLoc, sprite));
+
     }
 
 
