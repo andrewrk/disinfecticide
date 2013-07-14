@@ -1,4 +1,5 @@
 var chem = require("chem");
+var Vec2d = chem.vec2d.Vec2d;
 var perlin = require('./perlin');
 var Color = require('./color');
 var STREAMER_SPEED = 0.20;
@@ -12,8 +13,8 @@ var INFECT_CONSTANT = 0.000004;
 
 var populationCenters = [];
 
-var worldSize = chem.vec2d(480, 480);
-var worldPos = chem.vec2d(240, 0);
+var worldSize = new Vec2d(480, 480);
+var worldPos = new Vec2d(240, 0);
 
 var uiWeapons = [
   {
@@ -44,11 +45,11 @@ var uiWeapons = [
 var stepCounter = 0;
 var stepThreshold = 10;
 
-var colorUninhabited = new Color("#ffffff");
-var colorHealthyAlive = new Color("#ff83e9");
+var colorUninhabited   = new Color("#ffffff");
+var colorHealthyAlive  = new Color("#ff83e9");
 var colorInfectedAlive = new Color("#e13e3a");
-var colorInfectedDead = new Color("#008817");
-var colorHealthyDead = new Color("#585858");
+var colorInfectedDead  = new Color("#008817");
+var colorHealthyDead   = new Color("#585858");
 
 var pie = [
   {
@@ -93,7 +94,7 @@ chem.onReady(function () {
   engine.on('update', function (dt, dx) {
     if (engine.buttonState(chem.button.MouseLeft)) {
       rasterCircle(engine.mousePos.x - worldPos.x, engine.mousePos.y - worldPos.y, 30, function(x, y) {
-        if (inBounds(chem.vec2d(x, y))) {
+        if (inBounds(new Vec2d(x, y))) {
           var cell = cellAt(x, y);
           cell.addHealthyPopulation( dx*0.1*MAX_CELL_POPULATION );
           renderCell(cellIndex(x, y));
@@ -160,10 +161,10 @@ chem.onReady(function () {
 
     var pieMargin = 10;
     var pieRadius = (worldPos.x - pieMargin * 2) / 2;
-    var pieLoc = chem.vec2d(pieMargin + pieRadius, engine.size.y - pieRadius - pieMargin);
+    var pieLoc = new Vec2d(pieMargin + pieRadius, engine.size.y - pieRadius - pieMargin);
     drawStatsPieChart(context, pieLoc.x, pieLoc.y, pieRadius);
 
-    var spotInfoSize = chem.vec2d(pieRadius * 2, 70);
+    var spotInfoSize = new Vec2d(pieRadius * 2, 70);
     var spotInfoLoc = pieLoc.offset(-pieRadius, -pieRadius - pieMargin - spotInfoSize.y);
     drawSpotInfo(context, spotInfoLoc, spotInfoSize);
 
@@ -366,7 +367,7 @@ chem.onReady(function () {
   }
 
   function setUpUi() {
-    var pos = chem.vec2d(10, 10);
+    var pos = new Vec2d(10, 10);
     for (var i = 0; i < uiWeapons.length; ++i) {
       var uiWeapon = uiWeapons[i];
       uiWeapon.sprite = new chem.Sprite(uiWeapon.name, {
@@ -418,8 +419,8 @@ chem.onReady(function () {
           var populationCenterIdx = Math.floor( Math.random() * populationCenters.length );
           var destIdx = populationCenters[populationCenterIdx]
 
-          var destLoc = chem.vec2d(destIdx%worldSize.x, Math.floor(destIdx/worldSize.x));
-          var srcLoc = chem.vec2d(x, y);
+          var destLoc = new Vec2d(destIdx%worldSize.x, Math.floor(destIdx/worldSize.x));
+          var srcLoc = new Vec2d(x, y);
           streamers.push(new Streamer(srcLoc, destLoc, sprite));
         }
 
@@ -450,7 +451,7 @@ chem.onReady(function () {
         for (var dy = -1; dy <= 1; ++dy) {
           for (var dx = -1; dx <= 1; ++dx) {
             if (dx === 0 && dy === 0) continue;
-            if (!inBounds(chem.vec2d(x+dx, y+dy))) continue;
+            if (!inBounds(new Vec2d(x+dx, y+dy))) continue;
             var neighbor = cellAt(x+dx, y+dy);
             if (!neighbor.canInfect()) continue;
 
