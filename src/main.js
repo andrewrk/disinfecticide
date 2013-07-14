@@ -39,6 +39,9 @@ var Plague = {
   StreamRate: 0,
 }
 
+var timeCounter = 0;
+var timeThresh  = 0.001;
+
 chem.onReady(function () {
   var canvas = document.getElementById("game");
   var engine = new chem.Engine(canvas);
@@ -101,6 +104,13 @@ chem.onReady(function () {
         });
       }
     });
+
+    timeCounter += dt;
+    if (timeCounter > timeThresh) {
+      computePlagueSpread();
+      timeCounter = 0;
+    }
+
   });
   engine.on('draw', function (context) {
     // clear the part that isn't covered by putImageData
@@ -146,9 +156,19 @@ chem.onReady(function () {
         cells[i].setPopulation(0);
       }
     }
+
+    // infect a pixel near the center to start us off
+    var searchIdx = Math.floor(engine.size.y/2) * engine.size.x + Math.floor(engine.size.x/2);
+    while (searchIdx < cells.length && !cells[searchIdx].canInfect()) {
+      searchIdx++;
+      continue;
+    }
+    cells[searchIdx].infect();
+
+    
+
     return cells;
   }
-
   function renderAllCells() {
     for (var i = 0; i < cells.length; ++i) {
       renderCell(i);
@@ -159,7 +179,15 @@ chem.onReady(function () {
     var cell = cells[i];
     var index = i * 4;
     var value = 255 - (cell.population * 255);
-    imageData.data[index + 0] = value; // red
+
+    if (cell.isInfected()) {
+      var blendConstant = 0.2;
+      imageData.data[index + 0] = Math.floor(value*blendConstant + 255*(1-blendConstant));
+      imageData.data[index + 1] = Math.floor(value*blendConstant);
+      imageData.data[index + 2] = Math.floor(value*blendConstant);
+    } else { 
+      imageData.data[index + 0] = value; // red
+    }
     imageData.data[index + 1] = value; // green
     imageData.data[index + 2] = value; // blue
     imageData.data[index + 3] = 255;   // alpha
@@ -209,26 +237,41 @@ chem.onReady(function () {
     }
   }
 
-  function neighborsOf(x,y) {
-    // location y*engine.size.x + x
-    neighbors = new Array();
-    if (y > 0)                 neighbors.push(cellAt(x,y-1));
-    if (y < (engine.size.y-1)) neighbors.push(cellAt(x,y+1));
-    if (x > 0)                 neighbors.push(cellAt(x-1,y));
-    if (x < (engine.size.x-1)) neighbors.push(cellAt(x+1,y));
-    return neighbors;
-  }
-
   function computePlagueSpread() {
+
     for (var i = 0; i < cells.length; ++i) {
-      neighbors = neighborsOf(i/engine.size.x, i % engine.size.x);
-      for (var j = 0; j < neighbors.length; ++j) {
-        if (neighbors[i].canInfect()) neighbors[i].infect();
+      var y = Math.floor(i/engine.size.x);
+      var x = i%engine.size.x;
+
+      if (!cells[i].isInfected()) continue;
+      
+      // hack to not double count
+      if (cells[i].justInfected) {
+        cells[i].justInfected = false;
+        continue;
       }
 
+      if (y > 0 && cellAt(x,y-1).canInfect()) {
+        cellAt(x,y-1).infect();
+        renderCell(i-engine.size.x);
+      }      
+
+      if (y < (engine.size.y-1) && cellAt(x,y+1).canInfect()) {
+        cellAt(x,y+1).infect();
+        renderCell(i+engine.size.x);
+      }
+
+      if (x > 0 && cellAt(x-1,y).canInfect()) {
+        cellAt(x-1,y).infect();
+        renderCell(i-1);
+      }
+
+      if (x < (engine.size.x-1) && cellAt(x+1,y).canInfect()) {
+        cellAt(x+1,y).infect();
+        renderCell(i+1);
+      }
     }
   }
-
 });
 
 function Plague() {
@@ -245,33 +288,31 @@ function Cell() {
   this.populationHealthyDead = 0;
   this.populationInfectedDead = 0;
 
-  this.canInfect = function() {
-    if (this.populationHealthyAlive > 0 &&
-        this.populationInfectedAlive <= 0) 
-    {
-      return true;
-    }
-  }
+  this.justInfected = false;
+}
 
-  this.isInfected = function() {
-    if (this.populationInfectedAlive > 0) return true;
-    else return false;
-  }
+Cell.prototype.canInfect = function() {
+  if (this.populationHealthyAlive > 0 &&
+      this.populationInfectedAlive <= 0)
+       return true;
+  else return false; 
+}
 
-  this.infect = function() {
-    this.populationInfectedAlive = this.populationHealthyAlive;
-    this.populationHealthyAlive = 0;
-  }
+Cell.prototype.isInfected = function() {
+  if (this.populationInfectedAlive > 0) return true;
+  else return false;
+}
 
-  this.setPopulation = function(healthy_ppl) {
-    this.population = healthy_ppl;
-    this.populationHealthyAlive = this.population;
+Cell.prototype.infect = function() {
+  this.populationInfectedAlive = this.populationHealthyAlive;
+  this.populationHealthyAlive = 0;
+  this.justInfected = true;
+}
 
-  }
-
-  this.computeUpdate = function() {
-    
-  }
+Cell.prototype.setPopulation = function(healthy_ppl) {
+  this.population = healthy_ppl;
+  this.populationHealthyAlive = this.population;
+  this.populationInfectedAlive = 0;
 }
 
 function rasterCircle(x0, y0, radius, cb) {
