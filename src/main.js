@@ -63,7 +63,6 @@ chem.onReady(function () {
       rasterCircle(engine.mousePos.x - worldPos.x, engine.mousePos.y - worldPos.y, 30, function(x, y) {
         if (inBounds(chem.vec2d(x, y))) {
           var cell = cellAt(x, y);
-          //cell.population += dx * 0.1;
           cell.addHealthyPopulation( dx*0.1*MAX_POPULATION );
           renderCell(y * worldSize.x + x);
         }
@@ -237,12 +236,10 @@ chem.onReady(function () {
 
       if (!cells[i].isInfected()) continue;
 
-      // hack to not double count
-      if (cells[i].justInfected) {
-        cells[i].justInfected = false;
-        continue;
-      }
+      // so that we don't double count infections 
+      if (cells[i].justInfected) continue;
 
+      // four neighbors
       if (y > 0 && cellAt(x,y-1).canInfect()) {
         cellAt(x,y-1).infect();
         renderCell(i-worldSize.x);
@@ -262,7 +259,37 @@ chem.onReady(function () {
         cellAt(x+1,y).infect();
         renderCell(i+1);
       }
+
+      // rest of the "nine" neighbors
+      // bottom right
+      if (x < (worldSize.x-1) && y < (worldSize.y-1) && cellAt(x+1,y+1).canInfect()) {
+        cellAt(x+1,y+1).infect();
+        renderCell(i+worldSize.x+1);
+      }
+
+      // bottom left
+      if (x > 0 && y < (worldSize.y-1) && cellAt(x-1,y+1).canInfect()) {
+        cellAt(x-1,y+1).infect();
+        renderCell(i+worldSize.x-1);
+      }
+
+      // top left
+      if (x > 0 && y > 0 && cellAt(x-1,y-1).canInfect()) {
+        cellAt(x-1,y-1).infect();
+        renderCell(i-worldSize.x-1);
+      }
+
+      // top right
+      if (x < (worldSize.x-1) && y > 0 && cellAt(x+1,y-1).canInfect()) {
+        cellAt(x+1,y-1).infect();
+        renderCell(i-worldSize.x+1);
+      }
     }
+
+    for (var i = 0; i < cells.length; ++i) {
+      cells[i].justInfected = false;
+    }
+
   }
 });
 
