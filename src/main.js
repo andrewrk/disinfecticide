@@ -103,7 +103,7 @@ chem.onReady(function () {
       var relPos = engine.mousePos.minus(worldPos);
       if (inBounds(relPos)) {
         var sprite = new chem.Sprite("car", { batch: batch });
-        streamers.push(new Streamer(relPos, relPos.offset(200, 200), sprite));
+        streamers.push(new Streamer(relPos, relPos.offset(20, 20), sprite));
       }
     }
     if (engine.buttonJustPressed(chem.button.MouseLeft)) {
@@ -137,18 +137,12 @@ chem.onReady(function () {
         });
       }
     });
-    
-    for (var i=0; i < streamers.length; i++) {
-      if (streamers[i].deleted) {
-        streamers.splice(i, 1);
-      }
-    }
-
 
     stepCounter += 1;
     if (stepCounter > stepThreshold) {
       computePlagueSpread();
       updateCells();
+      cullDeletedStreamers();
 
       stepCounter -= stepThreshold;
     }
@@ -179,6 +173,15 @@ chem.onReady(function () {
   });
   engine.start();
   canvas.focus();
+
+  function cullDeletedStreamers() {
+    for (var i = 0; i < streamers.length; ++i) {
+      if (streamers[i].deleted) {
+        streamers.splice(i, 1);
+        i -= 1;
+      }
+    }
+  }
 
   function drawSpotInfo(context, pos, size) {
     var relMousePos = engine.mousePos.minus(worldPos);
@@ -289,7 +292,7 @@ chem.onReady(function () {
       var n = noise[i];
       if (n > 0.70) {
         cells[i].addHealthyPopulation( ((n-0.7)/0.3)*MAX_CELL_POPULATION );
-        
+
         // staticly initialize targets for streamers to try and go to
         if (n > 0.80) {
           populationCenters.push(i);
@@ -401,25 +404,19 @@ chem.onReady(function () {
 
       // Streamer logic
       if (cells[i].populationInfectedDead > 0.2 * cells[i].totalPopulation() &&
-          Math.random() < STREAMER_SCHEDULE_PROBABILITY)
+          Math.random() < STREAMER_SCHEDULE_PROBABILITY &&
+          streamers.length < MAX_CONCURRENT_STREAMERS)
       {
         var sprite = new chem.Sprite("car", { batch: batch });
 
         var populationCenterIdx = Math.floor( Math.random() * populationCenters.length );
         var destIdx = populationCenters[populationCenterIdx]
 
-        // var y = Math.floor(i/worldSize.x);
-        // var x = i%worldSize.x;
         var destLoc = new Vec2d(destIdx%worldSize.x, Math.floor(destIdx/worldSize.x));
         var srcLoc = new Vec2d(i%worldSize.x, Math.floor(i/worldSize.x));
-        if (streamers.length < MAX_CONCURRENT_STREAMERS)
-          streamers.push(new Streamer(srcLoc, destLoc, sprite));
-
+        streamers.push(new Streamer(srcLoc, destLoc, sprite));
+      }
     }
-
-
-    }
-
   }
 
   function computePlagueSpread() {
@@ -441,7 +438,7 @@ chem.onReady(function () {
       if (cells[i].justInfected) continue;
 
       // add as a potential source of streamer
-      
+
 
       // four neighbors
       if (y > 0 && cellAt(x,y-1).canInfect()) {
