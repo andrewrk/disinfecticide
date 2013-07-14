@@ -3,6 +3,7 @@ var Vec2d = chem.vec2d;
 var perlin = require('./perlin');
 var STREAMER_SPEED = 0.001;
 var STREAMER_ARRIVE_THRESHOLD = 1;
+var MAX_POPULATION = 10000;
 
 var worldSize = chem.vec2d(480, 480);
 var worldPos = chem.vec2d(240, 0);
@@ -68,8 +69,8 @@ chem.onReady(function () {
       rasterCircle(engine.mousePos.x - worldPos.x, engine.mousePos.y - worldPos.y, 30, function(x, y) {
         if (inBounds(chem.vec2d(x, y))) {
           var cell = cellAt(x, y);
-          cell.population += dx * 0.1;
-          if (cell.population > 1) cell.population = 1;
+          //cell.population += dx * 0.1;
+          cell.addHealthyPopulation( dx*0.1*MAX_POPULATION );
           renderCell(y * worldSize.x + x);
         }
       });
@@ -152,10 +153,8 @@ chem.onReady(function () {
       cells[i] = new Cell();
       var n = noise[i];
       if (n > 0.70) {
-        cells[i].setPopulation((n - 0.70) / 0.30);
-      } else {
-        cells[i].setPopulation(0);
-      }
+        cells[i].addHealthyPopulation( ((n-0.7)/0.3)*MAX_POPULATION );
+      } 
     }
 
     // infect a pixel near the center to start us off
@@ -177,7 +176,7 @@ chem.onReady(function () {
   function renderCell(i) {
     var cell = cells[i];
     var index = i * 4;
-    var value = 255 - (cell.population * 255);
+    var value = 255 - (cell.populationHealthyAlive / MAX_POPULATION)*255;
 
     if (cell.isInfected()) {
       var blendConstant = 0.5;
@@ -290,8 +289,12 @@ function Cell() {
   this.justInfected = false;
 }
 
+Cell.prototype.addHealthyPopulation = function(population) {
+  this.populationHealthyAlive += population;
+}
+
 Cell.prototype.canInfect = function() {
-  return this.populationHealthyAlive > 0 && this.populationInfectedAlive <= 0;
+  return this.populationHealthyAlive > 0;
 }
 
 Cell.prototype.isInfected = function() {
