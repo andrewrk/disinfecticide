@@ -40,5 +40,8 @@ exports.spritesheet = {
     crosshair: {},
     'bomb-crosshair': {},
     'ch-disinfecticide': {},
+    biohazard: {
+      loop: false,
+    },
   }
 };

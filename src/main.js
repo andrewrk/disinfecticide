@@ -120,7 +120,7 @@ chem.onReady(function () {
       streamer.pos.add(streamer.dir.scaled(STREAMER_SPEED));
       streamer.sprite.pos = streamer.pos.plus(worldPos);
       if (streamer.pos.distance(streamer.dest) < STREAMER_ARRIVE_THRESHOLD) {
-        streamer.sprite.setAnimationName('explosion');
+        streamer.sprite.setAnimationName('biohazard');
         streamer.sprite.setFrameIndex(0);
 
         //streamer.dest.x, streamer.dest.y
