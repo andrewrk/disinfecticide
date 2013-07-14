@@ -5,9 +5,10 @@ var STREAMER_SPEED = 0.20;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var MAX_CELL_POPULATION = 10000;
 var PLAGUE_KILL_RATE = 0.01;
-var PLAGUE_KILL_CONSTANT = 2;
+var PLAGUE_KILL_CONSTANT = 0;
 var STREAMER_SCHEDULE_PROBABILITY = 0.0005;
 var MAX_CONCURRENT_STREAMERS = 10;
+var INFECT_CONSTANT = 0.000008;
 
 var populationCenters = [];
 
@@ -126,9 +127,8 @@ chem.onReady(function () {
         //streamer.dest.x, streamer.dest.y
         var destCell = cellAt(streamer.dest.x, streamer.dest.y);
         if (destCell.canInfect()) {
-          destCell.infect();
+          destCell.infect(1);
           renderCell(destCell.index);
-          destCell.justInfected = false;
         }
 
         streamer.sprite.on('animationend', function() {
@@ -163,7 +163,7 @@ chem.onReady(function () {
     var pieLoc = chem.vec2d(pieMargin + pieRadius, engine.size.y - pieRadius - pieMargin);
     drawStatsPieChart(context, pieLoc.x, pieLoc.y, pieRadius);
 
-    var spotInfoSize = chem.vec2d(pieRadius * 2, 50);
+    var spotInfoSize = chem.vec2d(pieRadius * 2, 70);
     var spotInfoLoc = pieLoc.offset(-pieRadius, -pieRadius - pieMargin - spotInfoSize.y);
     drawSpotInfo(context, spotInfoLoc, spotInfoSize);
 
@@ -194,25 +194,25 @@ chem.onReady(function () {
         caption: "Uninhabited",
       });
     }
-    if (cell.populationHealthyAlive > 0) {
+    if (cell.populationHealthyAlive >= 1) {
       items.push({
         color: colorHealthyAlive.toString(),
         caption: "Healthy: " + Math.floor(cell.populationHealthyAlive),
       });
     }
-    if (cell.populationInfectedAlive > 0) {
+    if (cell.populationInfectedAlive >= 1) {
       items.push({
         color: colorInfectedAlive.toString(),
         caption: "Infected: " + Math.floor(cell.populationInfectedAlive),
       });
     }
-    if (cell.populationHealthyDead > 0) {
+    if (cell.populationHealthyDead >= 1) {
       items.push({
         color: colorHealthyDead.toString(),
         caption: "Dead: " + Math.floor(cell.populationHealthyDead),
       });
     }
-    if (cell.populationInfectedDead > 0) {
+    if (cell.populationInfectedDead >= 1) {
       items.push({
         color: colorInfectedDead.toString(),
         caption: "Rotting Corpses: " + Math.floor(cell.populationInfectedDead),
@@ -312,7 +312,7 @@ chem.onReady(function () {
       while (!cells[searchIdx].canInfect() || cells[searchIdx].density() < 0.90) {
         searchIdx = (searchIdx + 1) % cells.length;
       }
-      cells[searchIdx].infect();
+      cells[searchIdx].infect(1);
     }
 
     return cells;
@@ -329,19 +329,19 @@ chem.onReady(function () {
     var density = 255 - (cell.density() * 255);
     var blendConstant = 0.2;
 
-    if (cell.populationInfectedAlive > 0) {
+    if (cell.populationInfectedAlive >= 1) {
       imageData.data[index + 0] = Math.floor(density*blendConstant + colorInfectedAlive.red  *(1-blendConstant));
       imageData.data[index + 1] = Math.floor(density*blendConstant + colorInfectedAlive.green*(1-blendConstant));
       imageData.data[index + 2] = Math.floor(density*blendConstant + colorInfectedAlive.blue *(1-blendConstant));
-    } else if (cell.populationInfectedDead > 0) {
+    } else if (cell.populationInfectedDead >= 1) {
       imageData.data[index + 0] = Math.floor(density*blendConstant + colorInfectedDead.red*(1-blendConstant));
       imageData.data[index + 1] = Math.floor(density*blendConstant + colorInfectedDead.green*(1-blendConstant));
       imageData.data[index + 2] = Math.floor(density*blendConstant + colorInfectedDead.blue*(1-blendConstant));
-    } else if (cell.populationHealthyAlive > 0) {
+    } else if (cell.populationHealthyAlive >= 1) {
       imageData.data[index + 0] = Math.floor(density*blendConstant + colorHealthyAlive.red  *(1-blendConstant));
       imageData.data[index + 1] = Math.floor(density*blendConstant + colorHealthyAlive.green*(1-blendConstant));
       imageData.data[index + 2] = Math.floor(density*blendConstant + colorHealthyAlive.blue *(1-blendConstant));
-    } else if (cell.populationHealthyDead > 0) {
+    } else if (cell.populationHealthyDead >= 1) {
       imageData.data[index + 0] = Math.floor(density*blendConstant + colorHealthyDead.red  *(1-blendConstant));
       imageData.data[index + 1] = Math.floor(density*blendConstant + colorHealthyDead.green*(1-blendConstant));
       imageData.data[index + 2] = Math.floor(density*blendConstant + colorHealthyDead.blue *(1-blendConstant));
@@ -436,14 +436,15 @@ chem.onReady(function () {
     var i = 0;
     for (var y = 0; y < worldSize.y; ++y) {
       for (var x = 0; x < worldSize.x; ++x, ++i) {
-        pie[0].stat += cells[i].populationHealthyAlive;
-        pie[1].stat += cells[i].populationInfectedAlive;
-        pie[2].stat += cells[i].populationHealthyDead + cells[i].populationInfectedDead;
+        var cell = cells[i];
+        pie[0].stat += cell.populationHealthyAlive;
+        pie[1].stat += cell.populationInfectedAlive;
+        pie[2].stat += cell.populationHealthyDead + cell.populationInfectedDead;
 
-        if (!cells[i].isInfected()) continue;
+        if (!cell.isInfected()) continue;
 
         // so that we don't double count infections
-        if (cells[i].justInfected) continue;
+        if (cell.justInfected) continue;
 
         // infect neighbors
         for (var dy = -1; dy <= 1; ++dy) {
@@ -452,7 +453,13 @@ chem.onReady(function () {
             if (!inBounds(chem.vec2d(x+dx, y+dy))) continue;
             var neighbor = cellAt(x+dx, y+dy);
             if (!neighbor.canInfect()) continue;
-            neighbor.infect();
+
+            neighbor.justInfected = neighbor.populationInfectedAlive === 0 && neighbor.populationInfectedDead === 0;
+            var amount = Math.min(neighbor.populationHealthyAlive,
+                (cell.populationInfectedAlive + cell.populationInfectedDead) * neighbor.populationHealthyAlive * INFECT_CONSTANT);
+            neighbor.populationHealthyAlive -= amount;
+            neighbor.populationInfectedAlive += amount;
+
             renderCell(cellIndex(x+dx, y+dy));
           }
         }
@@ -507,9 +514,10 @@ Cell.prototype.isInfected = function() {
   return this.populationInfectedAlive > 0;
 }
 
-Cell.prototype.infect = function() {
-  this.populationInfectedAlive = this.populationHealthyAlive;
-  this.populationHealthyAlive = 0;
+Cell.prototype.infect = function(amount) {
+  var trueAmount = Math.min(amount, this.populationHealthyAlive);
+  this.populationHealthyAlive -= trueAmount;
+  this.populationInfectedAlive += trueAmount;
   this.justInfected = true;
 }
 
