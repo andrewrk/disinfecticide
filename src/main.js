@@ -305,7 +305,6 @@ Cell.prototype.isInfected = function() {
 }
 
 Cell.prototype.infect = function() {
-  if (cell.population > 1) cell.population = 1;
   this.populationInfectedAlive = this.populationHealthyAlive;
   this.populationHealthyAlive = 0;
   this.justInfected = true;
