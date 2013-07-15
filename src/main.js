@@ -7,9 +7,9 @@ var STREAMER_SPEED = 0.40;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var STREAMER_RADIUS = 12;
 var STREAMER_MAX_PEOPLE = 1000;
-var STREAMER_MIN_RESPAWN_TIME = 1; // min time between streamer events
+var STREAMER_MIN_RESPAWN_TIME = 0.5; // min time between streamer events
 var streamer_time_counter = 0;
-var MAX_CONCURRENT_STREAMERS = 15;
+var MAX_CONCURRENT_STREAMERS = 25;
 var MAX_CELL_POPULATION = 10000;
 var PLAGUE_KILL_RATE = 0.0025;
 var PLAGUE_KILL_CONSTANT = 0.005;
@@ -136,8 +136,14 @@ chem.onReady(function () {
       streamer.pos.add(streamer.dir.scaled(STREAMER_SPEED));
       streamer.sprite.pos = streamer.pos.plus(worldPos);
       if (streamer.pos.distance(streamer.dest) < STREAMER_ARRIVE_THRESHOLD) {
-        streamer.sprite.setAnimationName('biohazard');
-        streamer.sprite.setFrameIndex(0);
+        
+        if (streamer.populationInfectedAlive > 0) {
+          streamer.sprite.setAnimationName('biohazard');
+          streamer.sprite.setFrameIndex(0);
+        } else {
+          // TODO: set a different, benign animation
+          streamer.sprite.delete();
+        }
 
         //streamer.dest.x, streamer.dest.y
         var destCell = cellAt(streamer.dest.x, streamer.dest.y);
@@ -260,13 +266,14 @@ chem.onReady(function () {
         var streamerCell = cellAt(Math.floor(streamer.pos.x), Math.floor(streamer.pos.y));
         streamerCell.populationHealthyDead += (streamer.populationHealthyAlive + streamer.populationInfectedAlive);
         renderCell(streamerCell.index);
+        casualties += streamer.populationHealthyAlive;
       }
 
       pie[PIE_STAT_CASUALTIES].stat += (streamer.populationHealthyAlive + streamer.populationInfectedAlive);
     });
 
     gunSound.play();
-    if (casualties >= 1) screamingSound.play();
+    if (casualties >= 1e-5) screamingSound.play();
   }
 
   function cullDeletedStreamers() {
@@ -549,16 +556,13 @@ chem.onReady(function () {
         cells[i].justInfected = false;
         if (cells[i].computeUpdate()) renderCell(i);
 
-
         // Infected streamers
         if (streamer_time_counter > STREAMER_MIN_RESPAWN_TIME &&
             cells[i].populationInfectedAlive > 0.3 * cells[i].totalPopulation() &&
              Math.random() < STREAMER_SCHEDULE_PROBABILITY &&
              streamers.length < MAX_CONCURRENT_STREAMERS)
         {
-          var sprite = new chem.Sprite("infected-car", { batch: batch });
-
-          var  healthyCenters = findHealthyPopulationCenters(50,50);
+          var healthyCenters = findHealthyPopulationCenters(50,50);
           var destIdx;
           if (healthyCenters.length > 0)
             destIdx = healthyCenters[ Math.floor( Math.random() * healthyCenters.length ) ];
@@ -567,14 +571,23 @@ chem.onReady(function () {
             destIdx = populationCenters[populationCenterIdx]
           }
 
-          var numInfected = Math.min( cells[i].populationInfectedAlive, STREAMER_MAX_PEOPLE );
-          cells[i].populationInfectedAlive -= numInfected;
-
-          renderCell(i);
-
           var destLoc = new Vec2d(destIdx%worldSize.x, Math.floor(destIdx/worldSize.x));
           var srcLoc = new Vec2d(x, y);
-          streamers.push(new Streamer(srcLoc, destLoc, sprite, 0, numInfected));
+
+          var isHealthy = Math.random() < (cells[i].populationHealthyAlive / cells[i].totalPopulation());
+          if (isHealthy) {
+            var numHealthy = Math.min( cells[i].populationHealthyAlive, STREAMER_MAX_PEOPLE );
+            cells[i].populationHealthyAlive -= numHealthy;
+            var sprite = new chem.Sprite("car", { batch: batch });
+            streamers.push(new Streamer(srcLoc, destLoc, sprite, numHealthy, 0.0));
+          } else {
+            var numInfected = Math.min( cells[i].populationInfectedAlive, STREAMER_MAX_PEOPLE );
+            cells[i].populationInfectedAlive -= numInfected;
+            var sprite = new chem.Sprite("infected-car", { batch: batch });
+            streamers.push(new Streamer(srcLoc, destLoc, sprite, 0.0, numInfected));
+          }
+
+          renderCell(i);
           streamer_time_counter = 0;
         }
 
@@ -686,6 +699,7 @@ Cell.prototype.isInfected = function() {
 }
 
 Cell.prototype.addInfected = function(amount) {
+  if (amount <= 0) return;
   this.populationInfectedAlive += amount;
   this.justInfected = true;
 }
