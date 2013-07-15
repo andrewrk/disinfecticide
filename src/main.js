@@ -23,6 +23,8 @@ var GUN_INFECT_KILL_CONSTANT = 20;
 var GUN_HEALTHY_KILL_RATE = 0.04;
 var GUN_HEALTHY_KILL_CONSTANT = 4;
 
+var BOMB_RADIUS = 30;
+
 var populationCenters = [];
 
 var worldSize = new Vec2d(480, 480);
@@ -37,7 +39,7 @@ var uiWeapons = [
   {
     name: "bomb",
     crosshair: "bomb-crosshair",
-    radius: 30,
+    radius: BOMB_RADIUS,
   },
   {
     name: "wall",
@@ -223,6 +225,55 @@ chem.onReady(function () {
         sprite.delete();
       });
     });
+
+    // run the bomb killing logic as the explosion animation is in progress.
+    // TODO: sync with animation in a principled rather than approximate way?
+    setTimeout( function() { 
+      var casualties = 0;
+      rasterCircle(targetPos.x, targetPos.y, BOMB_RADIUS, function(x,y) {
+        if (!inBounds(new Vec2d(x, y))) return;
+        var cell = cellAt(x, y);
+        
+        var infectedKillAmt = cell.populationInfectedAlive;
+        cell.populationInfectedAlive -= infectedKillAmt;
+        cell.populationHealthyDead += infectedKillAmt;
+        pie[PIE_STAT_CASUALTIES].stat += infectedKillAmt;
+        casualties += infectedKillAmt;
+
+        var healthyKillAmt = cell.populationHealthyAlive;
+        cell.populationHealthyAlive -= healthyKillAmt;
+        cell.populationHealthyDead += healthyKillAmt;
+        pie[PIE_STAT_CASUALTIES].stat += healthyKillAmt;
+        casualties += healthyKillAmt;
+
+        renderCell(cellIndex(x, y));
+      });
+
+      // check if we killed any streamers
+      var streamerKillCount = 0;
+      streamers.forEach(function(streamer) {
+        if (streamer.deleted) return;
+        if (targetPos.distance(streamer.pos) < BOMB_RADIUS) {
+          streamerKillCount += 1;
+          streamer.deleted = true;
+          streamer.sprite.setAnimationName('explosion');
+          streamer.sprite.setFrameIndex(0);
+          streamer.sprite.on('animationend', function() {
+            streamer.sprite.delete();
+          });
+
+          var streamerCell = cellAt(Math.floor(streamer.pos.x), Math.floor(streamer.pos.y));
+          streamerCell.populationHealthyDead += (streamer.populationHealthyAlive + streamer.populationInfectedAlive);
+          renderCell(streamerCell.index);
+          casualties += streamer.populationHealthyAlive;
+        }
+
+        pie[PIE_STAT_CASUALTIES].stat += (streamer.populationHealthyAlive + streamer.populationInfectedAlive);
+      });
+
+      //TODO: bombSound.play();
+      if (casualties >= 1e-5) screamingSound.play();
+    }, 500);
   }
 
   function shootGun() {
