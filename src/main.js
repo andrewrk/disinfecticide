@@ -23,7 +23,7 @@ var GUN_INFECT_KILL_CONSTANT = 20;
 var GUN_HEALTHY_KILL_RATE = 0.04;
 var GUN_HEALTHY_KILL_CONSTANT = 4;
 
-var BOMB_RADIUS = 30;
+var BOMB_RADIUS = 60;
 
 var populationCenters = [];
 
@@ -105,6 +105,7 @@ chem.onReady(function () {
   var gunSound = new chem.Sound('sfx/gun.ogg');
   var explosionSound = new chem.Sound('sfx/bomb.ogg');
   var infectedStreamerKillSound = new chem.Sound('sfx/infected_streamer_kill.ogg');
+  var newPlaugeSound = new chem.Sound('sfx/new_plague.ogg');
 
   var imageData = engine.context.getImageData(worldPos.x, worldPos.x, worldSize.x, worldSize.y);
   var cells = initializeCells();
@@ -142,6 +143,7 @@ chem.onReady(function () {
         
         if (streamer.populationInfectedAlive > 0) {
           streamer.sprite.setAnimationName('biohazard');
+          newPlaugeSound.play();
           streamer.sprite.setFrameIndex(0);
         } else {
           // TODO: set a different, benign animation
