@@ -3,16 +3,19 @@ var Vec2d = chem.vec2d.Vec2d;
 var perlin = require('./perlin');
 var Color = require('./color');
 var commaIt = require('comma-it').commaIt;
-var STREAMER_SPEED = 0.20;
+var STREAMER_SPEED = 0.40;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var STREAMER_RADIUS = 12;
 var STREAMER_MAX_PEOPLE = 1000;
+var STREAMER_MIN_RESPAWN_TIME = 1; // min time between streamer events
+var streamer_time_counter = 0;
+var MAX_CONCURRENT_STREAMERS = 15;
 var MAX_CELL_POPULATION = 10000;
 var PLAGUE_KILL_RATE = 0.0025;
 var PLAGUE_KILL_CONSTANT = 0.005;
 var STREAMER_SCHEDULE_PROBABILITY = 0.00025;
-var MAX_CONCURRENT_STREAMERS = 10;
 var INFECT_CONSTANT = 0.000004;
+var NUM_INITIAL_INFECTIONS = 4;
 
 var GUN_RADIUS = 6;
 var GUN_INFECT_KILL_RATE = 0.20;
@@ -103,6 +106,8 @@ chem.onReady(function () {
   var imageData = engine.context.getImageData(worldPos.x, worldPos.x, worldSize.x, worldSize.y);
   var cells = initializeCells();
 
+  initializeInfections();
+
   var currentCrosshair = null;
   var pieMargin = 10;
   var pieRadius = (worldPos.x - pieMargin * 2) / 2;
@@ -123,6 +128,8 @@ chem.onReady(function () {
     if (engine.buttonJustPressed(chem.button.MouseLeft)) {
       handleMouseLeft();
     }
+
+    streamer_time_counter += dt;
 
     streamers.forEach(function(streamer) {
       if (streamer.deleted) return;
@@ -399,28 +406,24 @@ chem.onReady(function () {
         }
       }
     }
-
-    // infect some pixels to start with
-    var startInfectCount = 2;
-    // break the world into startInfectCount chunks and put a random
-    // infection in every chunk
-    var chunkHeight = worldSize.y / startInfectCount;
-    for (i = 0; i < startInfectCount; ++i) {
-      var x = Math.floor(chunkHeight*Math.random() + i * chunkHeight);
-      var y = Math.floor(worldSize.x*Math.random());
-      var searchIdx = cellIndex(x, y);
-      while (!cells[searchIdx].canInfect() || cells[searchIdx].density() < 0.90) {
-        searchIdx = (searchIdx + 1) % cells.length;
-      }
-      cells[searchIdx].infect(1);
-    }
-
     return cells;
   }
   function renderAllCells() {
     for (var i = 0; i < cells.length; ++i) {
       renderCell(i);
     }
+  }
+
+  function initializeInfections() {
+    centers = findHealthyPopulationCenters(10,10);
+    
+    // choose random centers to infect;
+    var infectedIdx = new Array(NUM_INITIAL_INFECTIONS);
+    for (var i=0; i<infectedIdx.length; i++) {
+      infectedIdx[i] = Math.floor( Math.random() * centers.length );
+      cells[centers[infectedIdx[i]]].infect(1);
+    }
+
   }
 
   function findHealthyPopulationCenters(nx, ny) {
@@ -546,8 +549,10 @@ chem.onReady(function () {
         cells[i].justInfected = false;
         if (cells[i].computeUpdate()) renderCell(i);
 
+
         // Infected streamers
-        if (cells[i].populationInfectedAlive > 0.3 * cells[i].totalPopulation() &&
+        if (streamer_time_counter > STREAMER_MIN_RESPAWN_TIME &&
+            cells[i].populationInfectedAlive > 0.3 * cells[i].totalPopulation() &&
              Math.random() < STREAMER_SCHEDULE_PROBABILITY &&
              streamers.length < MAX_CONCURRENT_STREAMERS)
         {
@@ -570,6 +575,7 @@ chem.onReady(function () {
           var destLoc = new Vec2d(destIdx%worldSize.x, Math.floor(destIdx/worldSize.x));
           var srcLoc = new Vec2d(x, y);
           streamers.push(new Streamer(srcLoc, destLoc, sprite, 0, numInfected));
+          streamer_time_counter = 0;
         }
 
         i += 1;
