@@ -104,6 +104,7 @@ chem.onReady(function () {
   var screamingSound = new chem.Sound('sfx/screaming.ogg');
   var gunSound = new chem.Sound('sfx/gun.ogg');
   var explosionSound = new chem.Sound('sfx/bomb.ogg');
+  var infectedStreamerKillSound = new chem.Sound('sfx/infected_streamer_kill.ogg');
 
   var imageData = engine.context.getImageData(worldPos.x, worldPos.x, worldSize.x, worldSize.y);
   var cells = initializeCells();
@@ -226,10 +227,14 @@ chem.onReady(function () {
       });
     });
 
+    // play now since it has a lead up
+    explosionSound.play();
+
     // run the bomb killing logic as the explosion animation is in progress.
     // TODO: sync with animation in a principled rather than approximate way?
     setTimeout( function() { 
       var casualties = 0;
+      var streamerInfectedKilled = 0;
       rasterCircle(targetPos.x, targetPos.y, BOMB_RADIUS, function(x,y) {
         if (!inBounds(new Vec2d(x, y))) return;
         var cell = cellAt(x, y);
@@ -266,12 +271,13 @@ chem.onReady(function () {
           streamerCell.populationHealthyDead += (streamer.populationHealthyAlive + streamer.populationInfectedAlive);
           renderCell(streamerCell.index);
           casualties += streamer.populationHealthyAlive;
+          streamerInfectedKilled += streamer.populationInfectedAlive;
         }
 
         pie[PIE_STAT_CASUALTIES].stat += (streamer.populationHealthyAlive + streamer.populationInfectedAlive);
       });
 
-      explosionSound.play();
+      if (streamerInfectedKilled >= 1e-5) infectedStreamerKillSound.play();
       if (casualties >= 1e-5) screamingSound.play();
     }, 500);
   }
@@ -280,6 +286,8 @@ chem.onReady(function () {
     var targetPos = engine.mousePos.minus(worldPos);
 
     var casualties = 0;
+    var streamerInfectedKilled = 0;
+
     rasterCircle(targetPos.x, targetPos.y, GUN_RADIUS, function(x, y) {
       if (!inBounds(new Vec2d(x, y))) return;
       var cell = cellAt(x, y);
@@ -318,12 +326,15 @@ chem.onReady(function () {
         streamerCell.populationHealthyDead += (streamer.populationHealthyAlive + streamer.populationInfectedAlive);
         renderCell(streamerCell.index);
         casualties += streamer.populationHealthyAlive;
+        streamerInfectedKilled += streamer.populationInfectedAlive;
       }
 
       pie[PIE_STAT_CASUALTIES].stat += (streamer.populationHealthyAlive + streamer.populationInfectedAlive);
     });
 
     gunSound.play();
+
+    if (streamerInfectedKilled >= 1e-5) infectedStreamerKillSound.play();
     if (casualties >= 1e-5) screamingSound.play();
   }
 
