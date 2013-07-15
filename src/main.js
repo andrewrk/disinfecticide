@@ -254,7 +254,8 @@ chem.onReady(function () {
         streamerCell.populationHealthyDead += (streamer.populationHealthyAlive + streamer.populationInfectedAlive);
         renderCell(streamerCell.index);
       }
-      pie[PIE_STAT_CASUALTIES].stat += streamer.populationHealthyAlive;
+
+      pie[PIE_STAT_CASUALTIES].stat += (streamer.populationHealthyAlive + streamer.populationInfectedAlive);
     });
 
     gunSound.play();
@@ -578,18 +579,16 @@ chem.onReady(function () {
 
   function numHealthyInStreamers() {
     var totalHealthy = 0;
-
-    for (var s in streamers) {
-      totalHealthy += s.populationHealthyAlive;
+    for (var i=0; i<streamers.length; i++) {
+      totalHealthy += streamers[i].populationHealthyAlive;
     }
     return totalHealthy;
   }
 
   function numInfectedInStreamers() {
     var totalInfected = 0;
-
-    for (var s in streamers) {
-      totalInfected += this.populationInfectedAlive;
+    for (var i=0; i<streamers.length; i++) {
+      totalInfected += streamers[i].populationInfectedAlive;
     }
     return totalInfected;
   }
