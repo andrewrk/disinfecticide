@@ -103,7 +103,7 @@ chem.onReady(function () {
 
   var screamingSound = new chem.Sound('sfx/screaming.ogg');
   var gunSound = new chem.Sound('sfx/gun.ogg');
-  var explosionSound = new chem.Sound('sfx/boom.ogg');
+  var explosionSound = new chem.Sound('sfx/bomb.ogg');
 
   var imageData = engine.context.getImageData(worldPos.x, worldPos.x, worldSize.x, worldSize.y);
   var cells = initializeCells();
@@ -271,7 +271,7 @@ chem.onReady(function () {
         pie[PIE_STAT_CASUALTIES].stat += (streamer.populationHealthyAlive + streamer.populationInfectedAlive);
       });
 
-      //TODO: bombSound.play();
+      explosionSound.play();
       if (casualties >= 1e-5) screamingSound.play();
     }, 500);
   }
