@@ -127,6 +127,9 @@ chem.onReady(function () {
   var pieRadius = (worldPos.x - pieMargin * 2) / 2;
   var pieLoc = new Vec2d(pieMargin + pieRadius, engine.size.y - pieRadius - pieMargin);
 
+  var fpsLabel = engine.createFpsLabel();
+  fpsLabel.fillColor = "#000000";
+
   renderAllCells();
   setUpUi();
   selectWeapon(uiWeapons[0]);
@@ -151,7 +154,6 @@ chem.onReady(function () {
       streamer.pos.add(streamer.dir.scaled(STREAMER_SPEED));
       streamer.sprite.pos = streamer.pos.plus(worldPos);
       if (streamer.pos.distance(streamer.dest) < STREAMER_ARRIVE_THRESHOLD) {
-        
         if (streamer.populationInfectedAlive > 0) {
           streamer.sprite.setAnimationName('biohazard');
           newPlaugeSound.play();
@@ -180,8 +182,11 @@ chem.onReady(function () {
     if (stepCounter > stepThreshold) {
       computePlagueSpread();
       updateCells();
-      if (streamer_time_counter > STREAMER_MIN_RESPAWN_TIME && streamers.length < MAX_CONCURRENT_STREAMERS) 
+      if (streamer_time_counter > STREAMER_MIN_RESPAWN_TIME &&
+          streamers.length < MAX_CONCURRENT_STREAMERS)
+      {
         computeStreamers();
+      }
       cullDeletedStreamers();
       computeGameLogic();
       stepCounter -= stepThreshold;
@@ -196,7 +201,7 @@ chem.onReady(function () {
     context.putImageData(imageData, worldPos.x, worldPos.y);
 
     // draw sprites
-    engine.draw(batch);
+    batch.draw(context);
 
     drawStatsPieChart(context, pieLoc.x, pieLoc.y, pieRadius);
 
@@ -208,9 +213,7 @@ chem.onReady(function () {
     var newsBoxLoc = spotInfoLoc.offset(0, -spotInfoSize.y);
     drawNewsBox(context, newsBoxLoc, newsBoxSize);
 
-    // draw a little fps counter in the corner
-    context.fillStyle = '#000000'
-    engine.drawFps();
+    fpsLabel.draw(context);
   });
   engine.start();
   canvas.focus();
@@ -251,13 +254,13 @@ chem.onReady(function () {
 
     // run the bomb killing logic as the explosion animation is in progress.
     // TODO: sync with animation in a principled rather than approximate way?
-    setTimeout( function() { 
+    setTimeout( function() {
       var casualties = 0;
       var streamerInfectedKilled = 0;
       rasterCircle(targetPos.x, targetPos.y, BOMB_RADIUS, function(x,y) {
         if (!inBounds(new Vec2d(x, y))) return;
         var cell = cellAt(x, y);
-        
+
         var infectedKillAmt = cell.populationInfectedAlive;
         cell.populationInfectedAlive -= infectedKillAmt;
         cell.populationHealthyDead += infectedKillAmt;
@@ -367,7 +370,7 @@ chem.onReady(function () {
   }
 
   function drawNewsBox(context, pos, size) {
-    items = [];
+    var items = [];
 
     if (!game_over) {
       items.push("Round " + displayNumber(game_current_round));
@@ -545,11 +548,12 @@ chem.onReady(function () {
   }
 
   function initializeImportantPlaces() {
-    centers = findHealthyPopulationCenters(10,10);
-    
+    var centers = findHealthyPopulationCenters(10,10);
+
     // choose random centers to infect;
     var infectedIdx = new Array(NUM_INITIAL_INFECTIONS);
-    for (var i=0; i<infectedIdx.length; i++) {
+    var i;
+    for (i = 0; i < infectedIdx.length; i++) {
       infectedIdx[i] = Math.floor( Math.random() * centers.length );
       cells[centers[infectedIdx[i]]].infect(1);
     }
@@ -557,8 +561,8 @@ chem.onReady(function () {
     while (true) {
       var isContained = false;
       capitalIdx = centers[Math.floor( Math.random() * centers.length )];
-      for (var i=0; i<infectedIdx.length; i++) {
-        if (capitalIdx == infectedIdx[i]) isContained = true;
+      for (i = 0; i < infectedIdx.length; i++) {
+        if (capitalIdx === infectedIdx[i]) isContained = true;
       }
       if (!isContained) break;
     }
@@ -709,15 +713,16 @@ chem.onReady(function () {
           var srcLoc = new Vec2d(x, y);
 
           var isHealthy = Math.random() < (cells[i].populationHealthyAlive / cells[i].totalPopulation());
+          var sprite;
           if (isHealthy) {
             var numHealthy = Math.min( cells[i].populationHealthyAlive, STREAMER_MAX_PEOPLE );
             cells[i].populationHealthyAlive -= numHealthy;
-            var sprite = new chem.Sprite("car", { batch: batch });
+            sprite = new chem.Sprite("car", { batch: batch });
             streamers.push(new Streamer(srcLoc, destLoc, sprite, numHealthy, 0.0));
           } else {
             var numInfected = Math.min( cells[i].populationInfectedAlive, STREAMER_MAX_PEOPLE );
             cells[i].populationInfectedAlive -= numInfected;
-            var sprite = new chem.Sprite("infected-car", { batch: batch });
+            sprite = new chem.Sprite("infected-car", { batch: batch });
             streamers.push(new Streamer(srcLoc, destLoc, sprite, 0.0, numInfected));
           }
 
@@ -771,7 +776,7 @@ chem.onReady(function () {
             "to humanity without government oversight?");
     }
 
-    if (!game_over && pie[PIE_STAT_INFECTED].stat == 0) {
+    if (!game_over && pie[PIE_STAT_INFECTED].stat === 0) {
       game_over = true;
       game_end_time = game_total_time;
       game_end_round = game_current_round;
