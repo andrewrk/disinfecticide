@@ -7,6 +7,7 @@ var commaIt = require('comma-it').commaIt;
 var game_total_time = 0;
 var game_round_time = 30; // in seconds
 var game_current_round = 1;
+var game_end_time = 0;
 var game_over = false;
 var capitalIdx = 0;
 
@@ -202,6 +203,10 @@ chem.onReady(function () {
     var spotInfoLoc = pieLoc.offset(-pieRadius, -pieRadius - pieMargin - spotInfoSize.y);
     drawSpotInfo(context, spotInfoLoc, spotInfoSize);
 
+    var newsBoxSize = new Vec2d(pieRadius * 2, 75);
+    var newsBoxLoc = spotInfoLoc.offset(0, -spotInfoSize.y);
+    drawNewsBox(context, newsBoxLoc, newsBoxSize);
+
     // draw a little fps counter in the corner
     context.fillStyle = '#000000'
     engine.drawFps();
@@ -358,6 +363,46 @@ chem.onReady(function () {
         i -= 1;
       }
     }
+  }
+
+  function drawNewsBox(context, pos, size) {
+    items = [];
+    items.push("Round " + displayNumber(game_current_round));
+
+    if (!game_over) {
+      items.push("Total Time: " + displayNumber(game_total_time));
+      items.push("Next Round in: " + displayNumber((game_total_time / game_current_round) - game_round_time));
+    } else {
+      items.push("Total Time: " + displayNumber(game_end_time));
+      items.push("GAME OVER");
+    }
+
+    var margin = 4;
+    var boxSize = 16;
+    var y = pos.y + margin;
+    items.forEach(function(item) {
+      // context.beginPath();
+      // context.rect(pos.x + margin, y, boxSize, boxSize);
+      // context.closePath();
+      // context.fillStyle = item.color;
+      // context.fill();
+      // context.strokeStyle = "#000000";
+      // context.lineWidth = 1;
+      // context.stroke();
+
+      context.font = "13pt Arial";
+      context.textAlign = "left";
+      context.fillStyle = "#000000";
+      context.fillText(item, pos.x + margin + boxSize + margin, y + boxSize);
+
+      y += boxSize + margin;
+    });
+    context.beginPath();
+    context.rect(pos.x, pos.y, size.x, size.y);
+    context.closePath();
+    context.strokeStyle = "#000000";
+    context.lineWidth = 2;
+    context.stroke();
   }
 
   function drawSpotInfo(context, pos, size) {
@@ -706,18 +751,21 @@ chem.onReady(function () {
     if (!game_over && cells[capitalIdx].populationInfectedAlive > 0) {
       //TODO: make this better
       game_over = true;
+      game_end_time = game_total_time;
       alert("Your capital was infected; you and your loved ones were rushed " +
             "to an underground shelter while the plague takes its course.");
     }
 
-    if (!game_over && cells[capitalIdx].totalPopulation() <= 0) {
+    if (!game_over && cells[capitalIdx].populationHealthyAlive <= 1) {
       game_over = true;
+      game_end_time = game_total_time;
       alert("Everyone in the capital died, including you. What will happen " +
             "to humanity without government oversight?");
     }
 
     if (!game_over && pie[PIE_STAT_INFECTED].stat == 0) {
       game_over = true;
+      game_end_time = game_total_time;
       alert("You have stopped the plague, but at what cost?");
     }
 
@@ -726,7 +774,6 @@ chem.onReady(function () {
       STREAMER_SPEED += 0.05;
       MAX_CONCURRENT_STREAMERS += 1;
       INFECT_CONSTANT += 0.000001;
-
     }
   }
 
