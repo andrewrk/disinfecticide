@@ -9,6 +9,7 @@
     "chem-cli": "~0.5.1",
     "chem": "~0.4.5",
     "zfill": "0.0.1",
-    "comma-it": "0.0.5"
+    "comma-it": "0.0.5",
+    "perlin-noise": "0.0.1"
   }
 }

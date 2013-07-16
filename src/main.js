@@ -1,6 +1,6 @@
 var chem = require("chem");
 var Vec2d = chem.vec2d.Vec2d;
-var perlin = require('./perlin');
+var perlin = require('perlin-noise');
 var Color = require('./color');
 var commaIt = require('comma-it').commaIt;
 
