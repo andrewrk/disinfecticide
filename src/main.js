@@ -128,7 +128,7 @@ chem.onReady(function () {
   var pieLoc = new Vec2d(pieMargin + pieRadius, engine.size.y - pieRadius - pieMargin);
 
   var fpsLabel = engine.createFpsLabel();
-  fpsLabel.fillColor = "#000000";
+  fpsLabel.fillStyle = "#000000";
 
   renderAllCells();
   setUpUi();
