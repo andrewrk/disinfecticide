@@ -54,5 +54,7 @@ exports.spritesheet = {
     biohazard: {
       loop: false,
     },
+    capital: {
+    },
   }
 };

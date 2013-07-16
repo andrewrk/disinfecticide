@@ -3,13 +3,20 @@ var Vec2d = chem.vec2d.Vec2d;
 var perlin = require('./perlin');
 var Color = require('./color');
 var commaIt = require('comma-it').commaIt;
+
+var game_total_time = 0;
+var game_round_time = 30; // in seconds
+var game_current_round = 1;
+var game_over = false;
+var capitalIdx = 0;
+
 var STREAMER_SPEED = 0.40;
 var STREAMER_ARRIVE_THRESHOLD = 1;
 var STREAMER_RADIUS = 12;
 var STREAMER_MAX_PEOPLE = 1000;
 var STREAMER_MIN_RESPAWN_TIME = 0.5; // min time between streamer events
 var streamer_time_counter = 0;
-var MAX_CONCURRENT_STREAMERS = 25;
+var MAX_CONCURRENT_STREAMERS = 15;
 var MAX_CELL_POPULATION = 10000;
 var PLAGUE_KILL_RATE = 0.0025;
 var PLAGUE_KILL_CONSTANT = 0.005;
@@ -23,7 +30,7 @@ var GUN_INFECT_KILL_CONSTANT = 20;
 var GUN_HEALTHY_KILL_RATE = 0.04;
 var GUN_HEALTHY_KILL_CONSTANT = 4;
 
-var BOMB_RADIUS = 60;
+var BOMB_RADIUS = 30;
 
 var populationCenters = [];
 
@@ -100,6 +107,7 @@ chem.onReady(function () {
   var batch = new chem.Batch();
   var streamers = [];
   var selectionSprite = new chem.Sprite('selection', {batch: batch, zOrder: 1});
+  var capitalSprite = new chem.Sprite('capital', {batch: batch, zorder: 0});
 
   var screamingSound = new chem.Sound('sfx/screaming.ogg');
   var gunSound = new chem.Sound('sfx/gun.ogg');
@@ -110,7 +118,7 @@ chem.onReady(function () {
   var imageData = engine.context.getImageData(worldPos.x, worldPos.x, worldSize.x, worldSize.y);
   var cells = initializeCells();
 
-  initializeInfections();
+  initializeImportantPlaces();
 
   var currentCrosshair = null;
   var pieMargin = 10;
@@ -134,6 +142,7 @@ chem.onReady(function () {
     }
 
     streamer_time_counter += dt;
+    game_total_time += dt;
 
     streamers.forEach(function(streamer) {
       if (streamer.deleted) return;
@@ -170,6 +179,8 @@ chem.onReady(function () {
       computePlagueSpread();
       updateCells();
       cullDeletedStreamers();
+
+      computeGameLogic();
 
       stepCounter -= stepThreshold;
     }
@@ -362,6 +373,7 @@ chem.onReady(function () {
       });
     } else {
       var relMousePos = engine.mousePos.minus(worldPos);
+
       if (! inBounds(relMousePos)) return;
       var cell = cellAt(relMousePos.x, relMousePos.y);
       if (cell.totalPopulation() === 0) {
@@ -485,7 +497,7 @@ chem.onReady(function () {
     }
   }
 
-  function initializeInfections() {
+  function initializeImportantPlaces() {
     centers = findHealthyPopulationCenters(10,10);
     
     // choose random centers to infect;
@@ -495,6 +507,20 @@ chem.onReady(function () {
       cells[centers[infectedIdx[i]]].infect(1);
     }
 
+    while (true) {
+      var isContained = false;
+      capitalIdx = centers[Math.floor( Math.random() * centers.length )];
+      for (var i=0; i<infectedIdx.length; i++) {
+        if (capitalIdx == infectedIdx[i]) isContained = true;
+      }
+      if (!isContained) break;
+    }
+
+    capitalSprite.pos = new Vec2d(capitalIdx % worldSize.x, Math.floor(capitalIdx / worldSize.x) );
+    capitalSprite.pos = capitalSprite.pos.plus(worldPos);
+    capitalSprite.scale.x = 0.15;
+    capitalSprite.scale.y = 0.15;
+    capitalSprite.setFrameIndex(0);
   }
 
   function findHealthyPopulationCenters(nx, ny) {
@@ -674,6 +700,34 @@ chem.onReady(function () {
       totalInfected += streamers[i].populationInfectedAlive;
     }
     return totalInfected;
+  }
+
+  function computeGameLogic() {
+    if (!game_over && cells[capitalIdx].populationInfectedAlive > 0) {
+      //TODO: make this better
+      game_over = true;
+      alert("Your capital was infected; you and your loved ones were rushed " +
+            "to an underground shelter while the plague takes its course.");
+    }
+
+    if (!game_over && cells[capitalIdx].totalPopulation() <= 0) {
+      game_over = true;
+      alert("Everyone in the capital died, including you. What will happen " +
+            "to humanity without government oversight?");
+    }
+
+    if (!game_over && pie[PIE_STAT_INFECTED].stat == 0) {
+      game_over = true;
+      alert("You have stopped the plague, but at what cost?");
+    }
+
+    if ((game_total_time / game_round_time) > game_current_round) {
+      game_current_round += 1;
+      STREAMER_SPEED += 0.05;
+      MAX_CONCURRENT_STREAMERS += 1;
+      INFECT_CONSTANT += 0.000001;
+
+    }
   }
 
   function computePlagueSpread() {
