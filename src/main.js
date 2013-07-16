@@ -5,7 +5,7 @@ var Color = require('./color');
 var commaIt = require('comma-it').commaIt;
 
 var game_total_time = 0;
-var game_round_time = 30; // in seconds
+var game_round_time = 20; // in seconds
 var game_current_round = 1;
 var game_end_time = 0;
 var game_end_round = 0;
@@ -180,10 +180,10 @@ chem.onReady(function () {
     if (stepCounter > stepThreshold) {
       computePlagueSpread();
       updateCells();
+      if (streamer_time_counter > STREAMER_MIN_RESPAWN_TIME && streamers.length < MAX_CONCURRENT_STREAMERS) 
+        computeStreamers();
       cullDeletedStreamers();
-
       computeGameLogic();
-
       stepCounter -= stepThreshold;
     }
 
@@ -686,13 +686,10 @@ chem.onReady(function () {
     }
   }
 
-  function updateCells() {
+  function computeStreamers() {
     var i = 0;
     for (var y = 0; y < worldSize.y; ++y) {
       for (var x = 0; x < worldSize.x; ++x) {
-        cells[i].justInfected = false;
-        if (cells[i].computeUpdate()) renderCell(i);
-
         // Infected streamers
         if (streamer_time_counter > STREAMER_MIN_RESPAWN_TIME &&
             cells[i].populationInfectedAlive > 0.3 * cells[i].totalPopulation() &&
@@ -730,6 +727,13 @@ chem.onReady(function () {
 
         i += 1;
       }
+    }
+  }
+
+  function updateCells() {
+    for (var i = 0; i < cells.length; i++) {
+      cells[i].justInfected = false;
+      if (cells[i].computeUpdate()) renderCell(i);
     }
   }
 
