@@ -8,6 +8,7 @@ var game_total_time = 0;
 var game_round_time = 30; // in seconds
 var game_current_round = 1;
 var game_end_time = 0;
+var game_end_round = 0;
 var game_over = false;
 var capitalIdx = 0;
 
@@ -367,12 +368,13 @@ chem.onReady(function () {
 
   function drawNewsBox(context, pos, size) {
     items = [];
-    items.push("Round " + displayNumber(game_current_round));
 
     if (!game_over) {
+      items.push("Round " + displayNumber(game_current_round));
       items.push("Total Time: " + displayNumber(game_total_time));
       items.push("Next Round in: " + displayNumber((game_total_time / game_current_round) - game_round_time));
     } else {
+      items.push("Round " + displayNumber(game_end_round));
       items.push("Total Time: " + displayNumber(game_end_time));
       items.push("GAME OVER");
     }
@@ -752,6 +754,7 @@ chem.onReady(function () {
       //TODO: make this better
       game_over = true;
       game_end_time = game_total_time;
+      game_end_round = game_current_round;
       alert("Your capital was infected; you and your loved ones were rushed " +
             "to an underground shelter while the plague takes its course.");
     }
@@ -759,6 +762,7 @@ chem.onReady(function () {
     if (!game_over && cells[capitalIdx].populationHealthyAlive <= 1) {
       game_over = true;
       game_end_time = game_total_time;
+      game_end_round = game_current_round;
       alert("Everyone in the capital died, including you. What will happen " +
             "to humanity without government oversight?");
     }
@@ -766,6 +770,7 @@ chem.onReady(function () {
     if (!game_over && pie[PIE_STAT_INFECTED].stat == 0) {
       game_over = true;
       game_end_time = game_total_time;
+      game_end_round = game_current_round;
       alert("You have stopped the plague, but at what cost?");
     }
 
